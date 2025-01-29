@@ -21,22 +21,29 @@ object NetworkModule {
         level = HttpLoggingInterceptor.Level.BODY
     }
 
-    private val okHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS) // Set the connection timeout
-        .writeTimeout(30, TimeUnit.SECONDS) // Set the write timeout
-        .readTimeout(30, TimeUnit.SECONDS) // Set the read timeout
-        .build()
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(authInterceptor: AuthInterceptor): OkHttpClient {
+        return OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+//            .addInterceptor(authInterceptor)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+    }
 
     private val gson = GsonBuilder()
         .setLenient()
         .create()
 
-    private const val BASE_URL = "https://6dea-2409-40d2-5e-38cf-dd8e-4d35-ace-e0cd.ngrok-free.app"
+    private const val BASE_URL =
+        "https://8343-2409-40d2-12ef-65cb-49e2-f303-8338-8e88.ngrok-free.app"
 
     @Provides
     @Singleton
     @Named("default")
-    fun provideRetrofit(): Retrofit {
+    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)

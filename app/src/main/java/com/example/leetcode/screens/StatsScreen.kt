@@ -3,6 +3,7 @@ package com.example.leetcode.screens
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,10 +31,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.leetcode.models.ViewModel
 import com.example.leetcode.navigation.BottomNavBar
+import com.example.leetcode.routes.Routes
 import com.example.leetcode.utils.CustomTopBar
 import com.example.leetcode.utils.TabContent
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -45,14 +45,25 @@ fun StatsScreen(
     Scaffold(
         containerColor = Color.Black,
         content = {
-            UserStats(modifier = modifier, vm = vm)
+            UserStats(
+                modifier = modifier,
+                vm = vm,
+                navController = navController
+            )
         },
-        bottomBar = { BottomNavBar(modifier = modifier, navController = navController) }
+        bottomBar = { BottomNavBar(
+            modifier = modifier,
+            navController = navController
+        ) }
     )
 }
 
 @Composable
-fun UserStats(modifier: Modifier, vm: ViewModel) {
+fun UserStats(
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
 
     Column(
         modifier = modifier
@@ -72,11 +83,21 @@ fun UserStats(modifier: Modifier, vm: ViewModel) {
                 {
                     when (selectedTab) {
                         "JAVA" -> {
-                            UserStatsColumn(language = "Java", modifier = modifier, vm = vm)
+                            UserStatsColumn(
+                                language = "Java",
+                                modifier = modifier,
+                                vm = vm,
+                                navController = navController
+                            )
                         }
 
                         "CPP" -> {
-                            UserStatsColumn(language = "CPP", modifier = modifier, vm = vm)
+                            UserStatsColumn(
+                                language = "CPP",
+                                modifier = modifier,
+                                vm = vm,
+                                navController = navController
+                            )
                         }
                     }
                 }
@@ -86,7 +107,12 @@ fun UserStats(modifier: Modifier, vm: ViewModel) {
 }
 
 @Composable
-fun UserStatsColumn(modifier: Modifier, language: String, vm: ViewModel) {
+fun UserStatsColumn(
+    modifier: Modifier,
+    language: String,
+    vm: ViewModel,
+    navController: NavController,
+) {
 
     Spacer(modifier = modifier.padding(top = 16.dp))
 
@@ -94,7 +120,7 @@ fun UserStatsColumn(modifier: Modifier, language: String, vm: ViewModel) {
 
     LaunchedEffect(language) {
         try {
-            streakMap = vm.questionsCount(language) // Fetching the data from ViewModel
+            streakMap = vm.questionsCount(language)
         } catch (e: Exception) {
             Log.e("StudentStreak", "Error fetching streak data: ${e.localizedMessage}")
         }
@@ -110,7 +136,8 @@ fun UserStatsColumn(modifier: Modifier, language: String, vm: ViewModel) {
             Card(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp)
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(name)) },
                 shape = RoundedCornerShape(8.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
@@ -122,11 +149,9 @@ fun UserStatsColumn(modifier: Modifier, language: String, vm: ViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(text = name, color = Color.White)
-                    Text(text = score.toString(), color = Color.White) // Convert score to string
+                    Text(text = score.toString(), color = Color.White)
                 }
             }
         }
     }
 }
-
-

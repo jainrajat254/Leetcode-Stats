@@ -1,9 +1,11 @@
 package com.example.leetcode.screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +43,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.leetcode.R
 import com.example.leetcode.models.ViewModel
 import com.example.leetcode.navigation.BottomNavBar
+import com.example.leetcode.routes.Routes
 import com.example.leetcode.utils.CustomTopBar
 import com.example.leetcode.utils.TabContent
 
@@ -51,31 +54,63 @@ fun LeaderboardScreen(
     vm: ViewModel,
     navController: NavController = rememberNavController(),
 ) {
-
     Scaffold(containerColor = Color.Black,
-        content = { Leaderboard(modifier = modifier,vm = vm) },
-        bottomBar = { BottomNavBar(modifier = modifier, navController = navController) }
+        content = {
+            Leaderboard(
+                modifier = modifier,
+                vm = vm,
+                navController = navController
+            )
+        },
+        bottomBar = {
+            BottomNavBar(
+                modifier = modifier,
+                navController = navController
+            )
+        }
     )
 }
 
 @Composable
-fun Leaderboard(modifier: Modifier, vm: ViewModel) {
+fun Leaderboard(
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp, bottom = 64.dp),
         verticalArrangement = Arrangement.Top
     ) {
-        CustomTopBar(modifier = modifier, text = "Leaderboard")
+        CustomTopBar(
+            modifier = modifier,
+            text = "Leaderboard"
+        )
+
         Spacer(modifier = modifier.height(16.dp))
 
-        TabContent(modifier = modifier,
+        TabContent(
+            modifier = modifier,
             tabs = listOf("Language", "Club"),
             contentForTab = { selectedTab ->
                 {
                     when (selectedTab) {
-                        "Language" -> LeaderboardEntries(modifier = modifier, vm = vm)
-                        "Club" -> LeaderboardEntriesForClub(modifier = modifier, vm = vm)
+                        "Language" -> {
+                            LeaderboardEntries(
+                                modifier = modifier,
+                                vm = vm,
+                                navController = navController
+                            )
+                        }
+
+                        "Club" -> {
+                            LeaderboardEntriesForClub(
+                                modifier = modifier,
+                                vm = vm,
+                                navController = navController
+                            )
+                        }
                     }
                 }
             }
@@ -84,7 +119,11 @@ fun Leaderboard(modifier: Modifier, vm: ViewModel) {
 }
 
 @Composable
-fun LeaderboardEntries(modifier: Modifier, vm: ViewModel) {
+fun LeaderboardEntries(
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
     Spacer(modifier = modifier.height(16.dp))
     TabContent(
         modifier = modifier,
@@ -92,8 +131,23 @@ fun LeaderboardEntries(modifier: Modifier, vm: ViewModel) {
         contentForTab = { selectedTab ->
             {
                 when (selectedTab) {
-                    "JAVA" -> LeaderBoardByLanguage(language = "Java", modifier = modifier, vm = vm)
-                    "CPP" -> LeaderBoardByLanguage(language = "CPP", modifier = modifier, vm = vm)
+                    "JAVA" -> {
+                        LeaderBoardByLanguage(
+                            language = "Java",
+                            modifier = modifier,
+                            vm = vm,
+                            navController = navController
+                        )
+                    }
+
+                    "CPP" -> {
+                        LeaderBoardByLanguage(
+                            language = "CPP",
+                            modifier = modifier,
+                            vm = vm,
+                            navController = navController
+                        )
+                    }
                 }
             }
         }
@@ -101,14 +155,22 @@ fun LeaderboardEntries(modifier: Modifier, vm: ViewModel) {
 }
 
 @Composable
-fun LeaderBoardByLanguage(language: String, modifier: Modifier, vm: ViewModel) {
+fun LeaderBoardByLanguage(
+    language: String,
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
     var list by remember { mutableStateOf<List<String>>(listOf()) }
 
     LaunchedEffect(language) {
-        list = vm.languageLeaderBoard(selectedLanguage = language)
+        try {
+            list = vm.languageLeaderBoard(selectedLanguage = language)
+        } catch (e: Exception) {
+            Log.e("LeaderBoardByLanguage", "Error fetching leaderboard data: ${e.localizedMessage}")
+        }
     }
 
-    // LazyColumn to display the leaderboard
     LazyColumn(
         modifier = modifier
             .fillMaxWidth()
@@ -116,13 +178,14 @@ fun LeaderBoardByLanguage(language: String, modifier: Modifier, vm: ViewModel) {
             .padding(8.dp)
     ) {
         items(list) { name ->
-            val rank = list.indexOf(name) + 1 // This will give the correct rank (starting from 1)
+            val rank = list.indexOf(name) + 1
 
             Card(
                 modifier = modifier
                     .fillMaxWidth()
                     .height(90.dp)
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp)
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(name)) },
                 shape = RoundedCornerShape(8.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
@@ -173,35 +236,25 @@ fun LeaderBoardByLanguage(language: String, modifier: Modifier, vm: ViewModel) {
     }
 }
 
-
-
 @Composable
-fun LeaderboardEntriesForClub(modifier: Modifier, vm: ViewModel) {
+fun LeaderboardEntriesForClub(
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
     Spacer(modifier = modifier.padding(top = 16.dp))
 
     var list by remember { mutableStateOf<List<String>>(listOf()) }
-    //var streakList by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
 
     LaunchedEffect(Unit) {
-        list = vm.clubLeaderBoard()
-
-//        val tempStreakList = mutableListOf<Pair<String, Int>>()
-//
-//        val results = list.map { user ->
-//            async {
-//                val stats = vm.getUserStats(user)
-//                val totalSolved = stats?.totalSolved ?: 0
-//                user to totalSolved
-//            }
-//        }
-//
-//        val streakResults = results.awaitAll()
-//
-//        streakResults.forEach { (user, totalSolved) ->
-//            tempStreakList.add(user to totalSolved)
-//        }
-//
-//        streakList = tempStreakList.sortedByDescending { it.second }
+        try {
+            list = vm.clubLeaderBoard()
+        } catch (e: Exception) {
+            Log.e(
+                "LeaderboardEntriesForClub",
+                "Error fetching club leaderboard: ${e.localizedMessage}"
+            )
+        }
     }
 
     LazyColumn(
@@ -217,7 +270,8 @@ fun LeaderboardEntriesForClub(modifier: Modifier, vm: ViewModel) {
                 modifier = modifier
                     .fillMaxWidth()
                     .height(90.dp)
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp)
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(name)) },
                 shape = RoundedCornerShape(8.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))

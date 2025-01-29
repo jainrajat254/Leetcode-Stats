@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -112,7 +113,7 @@ fun AccountCheck(
 fun LastSevenDaysStreak(
     modifier: Modifier,
     username: String,
-    vm: ViewModel
+    vm: ViewModel,
 ) {
     var lastSevenDays by remember { mutableStateOf<List<Boolean>>(emptyList()) }
     LaunchedEffect(username) {
@@ -126,7 +127,7 @@ fun LastSevenDaysStreak(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .size(302.dp, 100.dp)
+            .wrapContentSize()
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141A))
@@ -158,7 +159,10 @@ fun LastSevenDaysStreak(
 }
 
 @Composable
-fun Indicator(modifier: Modifier, color: Color) {
+fun Indicator(
+    modifier: Modifier,
+    color: Color,
+) {
     Box(
         modifier = modifier
             .size(18.dp)
@@ -170,7 +174,7 @@ fun Indicator(modifier: Modifier, color: Color) {
 fun TabContent(
     modifier: Modifier,
     tabs: List<String>,
-    contentForTab: (String) -> @Composable () -> Unit
+    contentForTab: (String) -> @Composable () -> Unit,
 ) {
     var selectedTab by remember { mutableStateOf(tabs.first()) }
 
@@ -195,7 +199,10 @@ fun TabContent(
 }
 
 @Composable
-fun CustomTopBar(modifier: Modifier, text: String) {
+fun CustomTopBar(
+    modifier: Modifier,
+    text: String,
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -261,7 +268,6 @@ fun CustomTextField(
         errorCursorColor = Color.Red,
         errorIndicatorColor = Color.Red,
         errorLabelColor = Color.Red
-
     ),
 ) {
     OutlinedTextField(

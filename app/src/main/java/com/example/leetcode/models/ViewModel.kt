@@ -3,11 +3,9 @@ package com.example.leetcode.models
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.leetcode.data.LeetcodeStats
 import com.example.leetcode.data.LoginCredentials
 import com.example.leetcode.data.LoginResponse
 import com.example.leetcode.data.UserData
-import com.example.leetcode.data.UserStats
 import com.example.leetcode.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -24,56 +22,44 @@ class ViewModel @Inject constructor(
         onSuccess: () -> Unit,
         onError: (String) -> Unit,
     ) {
-
         viewModelScope.launch {
             try {
-                val newUser = userRepository.registerUser(user)
+                userRepository.registerUser(user)
                 onSuccess()
             } catch (e: HttpException) {
                 Log.d("ViewModel", e.toString())
-                onError("HTTP Exception: ${e.message()}")
+                onError("HTTP Error during registration: ${e.message()}")
             } catch (e: Exception) {
                 Log.d("ViewModel", e.toString())
-                onError("Unexpected Error: ${e.message}")
+                onError("Unexpected error during registration: ${e.message}")
             }
         }
     }
 
     fun loginUser(
         user: LoginCredentials,
-        onSuccess: (LoginResponse) -> Unit,  // Expecting a UserResponse
+        onSuccess: (LoginResponse) -> Unit,
         onError: (String) -> Unit,
     ) {
         viewModelScope.launch {
             try {
-                // Call the repository method that returns a UserResponse
                 val userResponse = userRepository.loginUser(user)
-                onSuccess(userResponse)  // Pass the UserResponse to onSuccess callback
+                onSuccess(userResponse)
             } catch (e: HttpException) {
                 Log.d("ViewModel", e.toString())
-                onError("HTTP Exception: ${e.message()}")
+                onError("HTTP Error during login: ${e.message()}")
             } catch (e: Exception) {
                 Log.d("ViewModel", e.toString())
-                onError("Unexpected Error: ${e.message}")
+                onError("Unexpected error during login: ${e.message}")
             }
         }
     }
 
-    suspend fun getUsers(
-    ): List<String> {
-        try {
-            return userRepository.getUsers()
-        } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
-        }
-    }
-
-    suspend fun clubLeaderBoard(
-    ): List<String> {
+    suspend fun clubLeaderBoard(): List<String> {
         try {
             return userRepository.clubLeaderBoard()
         } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
+            throw Exception("Error fetching club leaderboard: ${e.message}", e)
         }
     }
 
@@ -81,62 +67,29 @@ class ViewModel @Inject constructor(
         try {
             return userRepository.languageLeaderBoard(selectedLanguage)
         } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
+            throw Exception(
+                "Error fetching language leaderboard for $selectedLanguage: ${e.message}",
+                e
+            )
         }
     }
 
-    suspend fun getUserStats(username: String): LeetcodeStats? {
-        try {
-            val stats = userRepository.getUserStats(username)
-            return stats  // Return the LeetcodeStats object
-        } catch (e: HttpException) {
-            Log.e("ViewModel", "HTTP Exception: ${e.message}")
-            throw e
-        } catch (e: Exception) {
-            Log.e("ViewModel", "Exception: ${e.message}")
-            throw e
-        }
-    }
-
-    suspend fun fetchUserStats(username: String): UserStats? {
-        try {
-            val stats = userRepository.fetchUserStats(username)
-            return stats
-        } catch (e: HttpException) {
-            Log.e("ViewModel", "HTTP Exception: ${e.message}")
-            throw e
-        } catch (e: Exception) {
-            Log.e("ViewModel", "Exception: ${e.message}")
-            throw e
-        }
-    }
-
-
-    suspend fun getUserByLanguage(selectedLanguage: String): List<String> {
-        try {
-            return userRepository.getUserByLanguage(selectedLanguage)
-        } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
-        }
-    }
-
-    suspend fun hasAttemptedToday(
-        selectedLanguage: String,
-    ): Map<String, Boolean> {
+    suspend fun hasAttemptedToday(selectedLanguage: String): Map<String, Boolean> {
         try {
             return userRepository.hasAttemptedToday(selectedLanguage)
         } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
+            throw Exception(
+                "Error checking today's attempts for $selectedLanguage: ${e.message}",
+                e
+            )
         }
     }
 
-    suspend fun questionsCount(
-        selectedLanguage: String,
-    ): Map<String, Int> {
+    suspend fun questionsCount(selectedLanguage: String): Map<String, Int> {
         try {
             return userRepository.questionsCount(selectedLanguage)
         } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
+            throw Exception("Error fetching question count for $selectedLanguage: ${e.message}", e)
         }
     }
 
@@ -144,18 +97,19 @@ class ViewModel @Inject constructor(
         return try {
             userRepository.lastSevenDays(username)
         } catch (e: Exception) {
-            Log.e("UserViewModel", "Error fetching last seven days data: ${e.message}")
-            emptyList() // Return an empty list in case of error
+            Log.e(
+                "UserViewModel",
+                "Error fetching last seven days data for $username: ${e.message}"
+            )
+            emptyList()
         }
     }
 
-    suspend fun questionsSolved(
-        username: String,
-    ): List<String> {
+    suspend fun questionsSolved(username: String): List<String> {
         try {
             return userRepository.questionsSolved(username)
         } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
+            throw Exception("Error fetching solved questions for $username: ${e.message}", e)
         }
     }
 
@@ -163,7 +117,15 @@ class ViewModel @Inject constructor(
         try {
             userRepository.updateAll()
         } catch (e: Exception) {
-            throw Exception("Error loading users by language: ${e.message}", e)
+            throw Exception("Error updating all data: ${e.message}", e)
+        }
+    }
+
+    suspend fun nameAndLanguage(username: String): List<String> {
+        try {
+            return userRepository.nameAndLanguage(username)
+        } catch (e: Exception) {
+            throw Exception("Error fetching name and language for $username: ${e.message}", e)
         }
     }
 }

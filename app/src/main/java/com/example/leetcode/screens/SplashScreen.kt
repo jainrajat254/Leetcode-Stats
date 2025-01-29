@@ -32,23 +32,21 @@ fun SplashScreen(
             Image(
                 painter = painterResource(id = R.drawable.leetcode),
                 contentDescription = "Logo",
-                modifier = Modifier.size(300.dp)  // Adjust logo size as needed
+                modifier = Modifier.size(300.dp)
             )
         }
 
-        // Navigate to the login screen after 2 seconds, logo stays visible during this time
         LaunchedEffect(Unit) {
-            delay(2000)  // Wait for 2 seconds before navigating
-            val user = getUserFromPreferences(navController.context)  // Fetch saved user data
+            delay(2000)
+            val user = getUserFromPreferences(navController.context)
 
             if (user != null) {
                 navController.popBackStack()
-                navController.navigate(Routes.Home.route)  // Navigate to the home screen
+                navController.navigate(Routes.Home.route)
             } else {
                 navController.popBackStack()
-                navController.navigate(Routes.Login.route)  {}
+                navController.navigate(Routes.Login.route) {}
             }
         }
-    }
-    )
+    })
 }

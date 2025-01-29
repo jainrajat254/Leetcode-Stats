@@ -17,11 +17,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -49,13 +58,14 @@ import com.example.leetcode.R
 import com.example.leetcode.models.ViewModel
 import com.example.leetcode.navigation.BottomNavBar
 import com.example.leetcode.routes.Routes
+import com.example.leetcode.sharedPreferences.SharedPreferencesManager
 import com.example.leetcode.sharedPreferences.SharedPreferencesManager.getUserFromPreferences
 import com.example.leetcode.utils.LastSevenDaysStreak
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @Composable
-fun ProfileScreen(
+fun UserProfileScreen(
     modifier: Modifier = Modifier,
     vm: ViewModel,
     navController: NavController,
@@ -143,7 +153,7 @@ fun ProfileScreen(
                         )
                     }
 
-                    item { SocialLinks(modifier = modifier) }
+                    item { SocialLinks(modifier = modifier, username_LC = username) }
 
                     item { LastSevenDaysStreak(modifier = modifier, username, vm) }
 
@@ -162,10 +172,12 @@ fun ProfileScreen(
     }
 }
 
-
-
 @Composable
-fun DrawerContent(navController: NavController, drawerState: DrawerState, coroutineScope: CoroutineScope) {
+fun DrawerContent(
+    navController: NavController,
+    drawerState: DrawerState,
+    coroutineScope: CoroutineScope,
+) {
     Column(
         verticalArrangement = Arrangement.Top,
         modifier = Modifier
@@ -192,52 +204,67 @@ fun DrawerContent(navController: NavController, drawerState: DrawerState, corout
         )
         DrawerItem(
             label = "Logout",
-            onClick = { navController.navigate(Routes.Login.route) },
+            onClick = {
+                try {
+                    SharedPreferencesManager.clearUserData(navController.context)
+                    navController.navigate(Routes.Login.route)
+                } catch (e: Exception) {
+                    Log.e("DrawerContent", "Error during logout: ${e.localizedMessage}")
+                }
+            },
             drawerState,
-            coroutineScope
+            coroutineScope,
+            labelColor = Color.Red
         )
     }
 }
 
 @Composable
-fun DrawerItem(label: String, onClick: () -> Unit, drawerState: DrawerState, coroutineScope: CoroutineScope) {
+fun DrawerItem(
+    label: String,
+    onClick: () -> Unit,
+    drawerState: DrawerState,
+    coroutineScope: CoroutineScope,
+    labelColor: Color = Color.White
+) {
     Text(
         text = label,
         style = TextStyle(
             fontSize = 20.sp,
-            color = Color.White
+            color = labelColor,
+            fontWeight = FontWeight.W600
         ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
             .clickable {
-                coroutineScope.launch { drawerState.close() }
-                onClick()
+                try {
+                    coroutineScope.launch { drawerState.close() }
+                    onClick()
+                } catch (e: Exception) {
+                    Log.e("DrawerItem", "Error navigating to $label: ${e.localizedMessage}")
+                }
             }
     )
 }
-
 
 @Composable
 fun QuestionStats(
     modifier: Modifier = Modifier,
     username: String,
-    vm: ViewModel
+    vm: ViewModel,
 ) {
-    // State to hold the list of questions solved
     var questionsSolved by remember { mutableStateOf<List<String>>(emptyList()) }
 
-    // Fetch data when the username changes
     LaunchedEffect(username) {
         try {
             questionsSolved = vm.questionsSolved(username)
             Log.d("Questions Solved", "$questionsSolved")
         } catch (e: Exception) {
-            Log.e("StudentStreak", "Error fetching streak data: ${e.localizedMessage}")
+            Log.e("QuestionStats", "Error fetching question stats: ${e.localizedMessage}")
         }
     }
 
-    // UI for the stats
     Box(
         modifier = modifier.fillMaxWidth()
     ) {
@@ -248,25 +275,22 @@ fun QuestionStats(
                 .fillMaxWidth()
                 .padding(end = 40.dp, top = 32.dp)
         ) {
-            // Easy
             StatItem(
-                number = questionsSolved.getOrNull(1) ?: "0", // Default to "0" if the list is empty
+                number = questionsSolved.getOrNull(1) ?: "0",
                 tag = "Easy",
                 color = Color(0xFF40BD45)
             )
             Spacer(modifier = Modifier.width(20.dp))
 
-            // Medium
             StatItem(
-                number = questionsSolved.getOrNull(2) ?: "0", // Default to "0" if the list is empty
+                number = questionsSolved.getOrNull(2) ?: "0",
                 tag = "Medium",
                 color = Color(0xFFC98F1B)
             )
             Spacer(modifier = Modifier.width(20.dp))
 
-            // Hard
             StatItem(
-                number = questionsSolved.getOrNull(3) ?: "0", // Default to "0" if the list is empty
+                number = questionsSolved.getOrNull(3) ?: "0",
                 tag = "Hard",
                 color = Color(0xFF970300)
             )
@@ -279,7 +303,7 @@ fun UserStats(
     modifier: Modifier,
     selectedLanguage: String,
     username: String,
-    vm: ViewModel
+    vm: ViewModel,
 ) {
     var questionsSolved by remember { mutableStateOf<List<String>>(emptyList()) }
 
@@ -288,13 +312,13 @@ fun UserStats(
             questionsSolved = vm.questionsSolved(username)
             Log.d("Questions Solved", "$questionsSolved")
         } catch (e: Exception) {
-            Log.e("StudentStreak", "Error fetching streak data: ${e.localizedMessage}")
+            Log.e("UserStats", "Error fetching user stats: ${e.localizedMessage}")
         }
     }
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .size(300.dp, 368.dp)
+            .wrapContentSize()
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141A))
@@ -318,8 +342,6 @@ fun UserStats(
             value = questionsSolved.getOrNull(0) ?: "0",
             modifier = modifier
         )
-        StatsRow(label = "NSCC Rank : ", value = "57", modifier = modifier)
-        StatsRow(label = "Language Rank : ", value = "30", modifier = modifier)
         StatsRow(
             label = "Leetcode Rank : ",
             value = questionsSolved.getOrNull(4) ?: "0",
@@ -369,11 +391,12 @@ fun StatsRow(
 @Composable
 fun SocialLinks(
     modifier: Modifier,
+    username_LC: String,
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .size(102.dp, 160.dp)
+            .wrapContentSize()
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0F141A))
@@ -406,7 +429,11 @@ fun SocialLinks(
                     .padding(horizontal = 4.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF5D5D5D))
             ) {
-                ProfileLinks(label = "Leetcode", url = "www.leetcode.com", modifier = modifier)
+                SocialLinkItem(
+                    platform = "Leetcode",
+                    url = "www.leetcode.com/u/$username_LC",
+                    modifier = modifier
+                )
             }
 
             Spacer(modifier = modifier.height(8.dp))
@@ -418,7 +445,11 @@ fun SocialLinks(
                     .padding(horizontal = 4.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF5D5D5D))
             ) {
-                ProfileLinks(label = "Linkedin", url = "www.linkedin.com", modifier = modifier)
+                SocialLinkItem(
+                    platform = "Linkedin",
+                    url = "www.linkedin.com",
+                    modifier = modifier
+                )
             }
 
             Spacer(modifier = modifier.height(8.dp))
@@ -430,15 +461,19 @@ fun SocialLinks(
                     .padding(horizontal = 4.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF5D5D5D))
             ) {
-                ProfileLinks(label = "Github", url = "www.github.com", modifier = modifier)
+                SocialLinkItem(
+                    platform = "Github",
+                    url = "www.github.com",
+                    modifier = modifier
+                )
             }
         }
     }
 }
 
 @Composable
-fun ProfileLinks(
-    label: String,
+fun SocialLinkItem(
+    platform: String,
     url: String,
     modifier: Modifier,
 ) {
@@ -446,7 +481,7 @@ fun ProfileLinks(
     val annotatedString = buildAnnotatedString {
         pushStringAnnotation(tag = "URL", annotation = url)
         withStyle(style = SpanStyle(fontSize = 16.sp, color = Color(0xFF003A6D))) {
-            append(label)
+            append(platform)
         }
         pop()
     }
@@ -487,7 +522,7 @@ fun StatItem(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = number.toString(),
+            text = number,
             style = TextStyle(
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
@@ -528,3 +563,4 @@ fun ProfileImage(
         )
     }
 }
+

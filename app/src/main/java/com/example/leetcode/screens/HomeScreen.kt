@@ -3,6 +3,7 @@ package com.example.leetcode.screens
 import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,12 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.leetcode.models.ViewModel
 import com.example.leetcode.navigation.BottomNavBar
+import com.example.leetcode.routes.Routes
 import com.example.leetcode.utils.CustomTopBar
 import com.example.leetcode.utils.Indicator
 import com.example.leetcode.utils.TabContent
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -44,13 +43,25 @@ fun HomeScreen(
     vm: ViewModel,
     navController: NavController,
 ) {
-    Scaffold(containerColor = Color.Black, content = {
-        StreakScreen(modifier = modifier, vm = vm)
-    }, bottomBar = { BottomNavBar(modifier = modifier, navController = navController) })
+    Scaffold(
+        containerColor = Color.Black,
+        content = {
+            StreakScreen(
+                modifier = modifier,
+                vm = vm,
+                navController = navController
+            )
+        },
+        bottomBar = { BottomNavBar(modifier = modifier, navController = navController) }
+    )
 }
 
 @Composable
-fun StreakScreen(modifier: Modifier, vm: ViewModel) {
+fun StreakScreen(
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -66,10 +77,21 @@ fun StreakScreen(modifier: Modifier, vm: ViewModel) {
                 {
                     when (selectedTab) {
                         "JAVA" -> {
-                            StudentStreak(language = "Java", modifier = modifier, vm = vm)
+                            StudentStreak(
+                                language = "Java",
+                                modifier = modifier,
+                                vm = vm,
+                                navController = navController
+                            )
                         }
+
                         "CPP" -> {
-                            StudentStreak(language = "CPP", modifier = modifier, vm = vm)
+                            StudentStreak(
+                                language = "CPP",
+                                modifier = modifier,
+                                vm = vm,
+                                navController = navController
+                            )
                         }
                     }
                 }
@@ -79,15 +101,19 @@ fun StreakScreen(modifier: Modifier, vm: ViewModel) {
 }
 
 @Composable
-fun StudentStreak(language: String, modifier: Modifier, vm: ViewModel) {
+fun StudentStreak(
+    language: String,
+    modifier: Modifier,
+    vm: ViewModel,
+    navController: NavController,
+) {
     Spacer(modifier = modifier.padding(top = 16.dp))
 
     var streakMap by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
 
     LaunchedEffect(language) {
         try {
-            //vm.updateAll()
-            streakMap = vm.hasAttemptedToday(language) // Fetching the data from ViewModel
+            streakMap = vm.hasAttemptedToday(language)
         } catch (e: Exception) {
             Log.e("StudentStreak", "Error fetching streak data: ${e.localizedMessage}")
         }
@@ -99,31 +125,35 @@ fun StudentStreak(language: String, modifier: Modifier, vm: ViewModel) {
             .background(Color(0xFF1B1B1B), shape = RoundedCornerShape(8.dp))
             .padding(8.dp)
     ) {
-        // Iterate over the keys of the map (usernames)
-        items(streakMap.keys.toList()) { name ->
-            val indicatorColor = streakMap[name] ?: false // Use the default value false if not found
+        items(streakMap.keys.toList()) { username ->
+            val indicatorColor = streakMap[username] ?: false
 
-            // Card for each user
             Card(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 4.dp)
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(username)) },
                 shape = RoundedCornerShape(8.dp),
                 elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B)) // Card background color
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
             ) {
-                val color = if (indicatorColor) Color(0xFF00FF00) else Color(0xFFFF4444) // Green if true, Red if false
+                val color = if (indicatorColor) Color(0xFF00FF00) else Color(0xFFFF4444)
                 Row(
                     modifier = modifier
                         .fillMaxWidth()
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = name, color = Color.White) // User name
-                    Indicator(modifier = modifier, color = color) // Streak indicator (Green/Red)
+                    Text(
+                        text = username,
+                        color = Color.White
+                    )
+                    Indicator(
+                        modifier = modifier,
+                        color = color
+                    )
                 }
             }
         }
     }
 }
-
