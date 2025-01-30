@@ -40,6 +40,7 @@ fun OtherProfileScreen(
 
     LaunchedEffect(username) {
         nameAndLanguage = vm.nameAndLanguage(username)
+        vm.updateAll()
     }
 
     Scaffold(

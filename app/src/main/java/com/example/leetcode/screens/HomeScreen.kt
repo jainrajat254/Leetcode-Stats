@@ -43,6 +43,9 @@ fun HomeScreen(
     vm: ViewModel,
     navController: NavController,
 ) {
+    LaunchedEffect(Unit) {
+        vm.updateAll()
+    }
     Scaffold(
         containerColor = Color.Black,
         content = {

@@ -38,7 +38,7 @@ object NetworkModule {
         .create()
 
     private const val BASE_URL =
-        "https://8343-2409-40d2-12ef-65cb-49e2-f303-8338-8e88.ngrok-free.app"
+        "https://d9db-2409-40d2-2a-106-38c3-85db-5610-903f.ngrok-free.app"
 
     @Provides
     @Singleton

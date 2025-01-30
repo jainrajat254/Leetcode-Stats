@@ -70,6 +70,9 @@ fun UserProfileScreen(
     vm: ViewModel,
     navController: NavController,
 ) {
+    LaunchedEffect(Unit) {
+        vm.updateAll()
+    }
     val context = LocalContext.current
     val userResponse = getUserFromPreferences(context)
     val username = userResponse?.username ?: "UserName"

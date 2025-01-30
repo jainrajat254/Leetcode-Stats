@@ -54,6 +54,9 @@ fun LeaderboardScreen(
     vm: ViewModel,
     navController: NavController = rememberNavController(),
 ) {
+    LaunchedEffect(Unit) {
+        vm.updateAll()
+    }
     Scaffold(containerColor = Color.Black,
         content = {
             Leaderboard(
