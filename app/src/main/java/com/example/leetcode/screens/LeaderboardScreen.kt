@@ -6,36 +6,21 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -47,6 +32,7 @@ import com.example.leetcode.routes.Routes
 import com.example.leetcode.utils.CustomTopBar
 import com.example.leetcode.utils.TabContent
 
+
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LeaderboardScreen(
@@ -57,9 +43,10 @@ fun LeaderboardScreen(
     LaunchedEffect(Unit) {
         vm.updateAll()
     }
-    Scaffold(containerColor = Color.Black,
+    Scaffold(
+        containerColor = Color.Black,
         content = {
-            Leaderboard(
+            LeaderboardContent(
                 modifier = modifier,
                 vm = vm,
                 navController = navController
@@ -75,7 +62,7 @@ fun LeaderboardScreen(
 }
 
 @Composable
-fun Leaderboard(
+fun LeaderboardContent(
     modifier: Modifier,
     vm: ViewModel,
     navController: NavController,
@@ -83,37 +70,33 @@ fun Leaderboard(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp, bottom = 64.dp),
+            .padding(16.dp, bottom = 64.dp)
+            .background(Color.Black),
         verticalArrangement = Arrangement.Top
     ) {
         CustomTopBar(
             modifier = modifier,
             text = "Leaderboard"
         )
-
         Spacer(modifier = modifier.height(16.dp))
 
+        // Tabs: Language & Club
         TabContent(
             modifier = modifier,
             tabs = listOf("Language", "Club"),
             contentForTab = { selectedTab ->
                 {
                     when (selectedTab) {
-                        "Language" -> {
-                            LeaderboardEntries(
-                                modifier = modifier,
-                                vm = vm,
-                                navController = navController
-                            )
-                        }
-
-                        "Club" -> {
-                            LeaderboardEntriesForClub(
-                                modifier = modifier,
-                                vm = vm,
-                                navController = navController
-                            )
-                        }
+                        "Language" -> LeaderboardEntries(
+                            modifier = modifier,
+                            vm = vm,
+                            navController = navController
+                        )
+                        "Club" -> LeaderboardEntriesForClub(
+                            modifier = modifier,
+                            vm = vm,
+                            navController = navController
+                        )
                     }
                 }
             }
@@ -128,29 +111,25 @@ fun LeaderboardEntries(
     navController: NavController,
 ) {
     Spacer(modifier = modifier.height(16.dp))
+    // Tabs: JAVA & CPP
     TabContent(
         modifier = modifier,
         tabs = listOf("JAVA", "CPP"),
         contentForTab = { selectedTab ->
             {
                 when (selectedTab) {
-                    "JAVA" -> {
-                        LeaderBoardByLanguage(
-                            language = "Java",
-                            modifier = modifier,
-                            vm = vm,
-                            navController = navController
-                        )
-                    }
-
-                    "CPP" -> {
-                        LeaderBoardByLanguage(
-                            language = "CPP",
-                            modifier = modifier,
-                            vm = vm,
-                            navController = navController
-                        )
-                    }
+                    "JAVA" -> LeaderBoardByLanguage(
+                        language = "Java",
+                        modifier = modifier,
+                        vm = vm,
+                        navController = navController
+                    )
+                    "CPP" -> LeaderBoardByLanguage(
+                        language = "CPP",
+                        modifier = modifier,
+                        vm = vm,
+                        navController = navController
+                    )
                 }
             }
         }
@@ -164,75 +143,47 @@ fun LeaderBoardByLanguage(
     vm: ViewModel,
     navController: NavController,
 ) {
-    var list by remember { mutableStateOf<List<String>>(listOf()) }
+    var userList by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(language) {
         try {
-            list = vm.languageLeaderBoard(selectedLanguage = language)
+            userList = vm.languageLeaderBoard(language)
         } catch (e: Exception) {
-            Log.e("LeaderBoardByLanguage", "Error fetching leaderboard data: ${e.localizedMessage}")
+            Log.e("LeaderBoardByLanguage", "Error: ${e.localizedMessage}")
         }
     }
 
-    LazyColumn(
+    Column(
         modifier = modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1B1B1B), shape = RoundedCornerShape(8.dp))
-            .padding(8.dp)
+            .fillMaxSize()
+            .background(Color(0xFF101324))
+            .padding(12.dp)
     ) {
-        items(list) { name ->
-            val rank = list.indexOf(name) + 1
+        // Show top 3 if we have at least 3
+        if (userList.size >= 3) {
+            TopThreeSection(
+                userList = userList,
+                navController = navController
+            )
+        }
 
-            Card(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .padding(vertical = 4.dp)
-                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(name)) },
-                shape = RoundedCornerShape(8.dp),
-                elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
-            ) {
-                Row(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Remaining users
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1B1B1B), shape = RoundedCornerShape(12.dp))
+                .padding(8.dp)
+        ) {
+            items(userList.drop(3)) { name ->
+                val rank = userList.indexOf(name) + 1
+
+                LeaderboardListItem(
+                    name = name,
+                    rank = rank
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.leetcode),
-                        contentDescription = "User_Image",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .border(
-                                width = 2.dp,
-                                color = Color.Transparent,
-                                shape = CircleShape
-                            )
-                    )
-
-                    Spacer(modifier = Modifier.width(24.dp))
-
-                    Text(
-                        text = name,
-                        color = Color.White,
-                        style = TextStyle(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 20.sp
-                        ),
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    Text(
-                        text = rank.toString(),
-                        color = Color.White,
-                        style = TextStyle(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 24.sp
-                        ),
-                    )
+                    navController.navigate(Routes.OtherProfile.createRoute(name))
                 }
             }
         }
@@ -247,80 +198,177 @@ fun LeaderboardEntriesForClub(
 ) {
     Spacer(modifier = modifier.padding(top = 16.dp))
 
-    var list by remember { mutableStateOf<List<String>>(listOf()) }
+    var userList by remember { mutableStateOf<List<String>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         try {
-            list = vm.clubLeaderBoard()
+            userList = vm.clubLeaderBoard()
         } catch (e: Exception) {
-            Log.e(
-                "LeaderboardEntriesForClub",
-                "Error fetching club leaderboard: ${e.localizedMessage}"
-            )
+            Log.e("LeaderboardEntriesForClub", "Error: ${e.localizedMessage}")
         }
     }
 
-    LazyColumn(
+    Column(
         modifier = modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1B1B1B), shape = RoundedCornerShape(8.dp))
-            .padding(8.dp)
+            .fillMaxSize()
+            .background(Color(0xFF101324))
+            .padding(12.dp)
     ) {
-        items(list) { name ->
-            val rank = list.indexOf(name) + 1
+        // Show top 3 if we have at least 3
+        if (userList.size >= 3) {
+            TopThreeSection(
+                userList = userList,
+                navController = navController
+            )
+        }
 
-            Card(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .padding(vertical = 4.dp)
-                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(name)) },
-                shape = RoundedCornerShape(8.dp),
-                elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
-            ) {
-                Row(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Remaining users
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF1B1B1B), shape = RoundedCornerShape(12.dp))
+                .padding(8.dp)
+        ) {
+            items(userList.drop(3)) { name ->
+                val rank = userList.indexOf(name) + 1
+
+                LeaderboardListItem(
+                    name = name,
+                    rank = rank
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.leetcode),
-                        contentDescription = "User_Image",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .border(
-                                width = 2.dp,
-                                color = Color.Transparent,
-                                shape = CircleShape
-                            )
-                    )
-
-                    Spacer(modifier = Modifier.width(24.dp))
-
-                    Text(
-                        text = name,
-                        color = Color.White,
-                        style = TextStyle(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 20.sp
-                        ),
-                    )
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    Text(
-                        text = rank.toString(),
-                        color = Color.White,
-                        style = TextStyle(
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 24.sp
-                        ),
-                    )
+                    navController.navigate(Routes.OtherProfile.createRoute(name))
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun TopThreeSection(
+    userList: List<String>,
+    navController: NavController
+) {
+    val topThree = userList.take(3)
+    val ranks = listOf(2, 1, 3)
+    val imageSizes = listOf(40.dp, 40.dp, 40.dp)
+    val heights = listOf(150.dp, 180.dp, 120.dp)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .background(Color.Transparent),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        topThree.forEachIndexed { index, name ->
+            val rank = ranks[index]
+            val imageSize = imageSizes[index]
+            val height = heights[index]
+            val showCrown = (rank == 1)
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(name)) }
+                    .height(height)
+            ) {
+                Box(contentAlignment = Alignment.TopCenter) {
+                    Image(
+                        painter = painterResource(id = R.drawable.leetcode),
+                        contentDescription = "User Image",
+                        modifier = Modifier
+                            .size(imageSize)
+                            .clip(CircleShape)
+                            .border(2.dp, Color.Gray, CircleShape)
+                    )
+                    if (showCrown) {
+                        Text(
+                            text = "👑",
+                            fontSize = 24.sp,
+                            modifier = Modifier.offset(y = (-12).dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = name,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "@username",
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+                Text(
+                    text = "Score: ${2000 - (rank - 1) * 300}",
+                    color = Color(0xFFFFD700),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LeaderboardListItem(
+    name: String,
+    rank: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp, horizontal = 8.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(6.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Profile Image
+            Image(
+                painter = painterResource(id = R.drawable.leetcode),
+                contentDescription = "User Image",
+                modifier = Modifier
+                    .size(50.dp)
+                    .border(width = 2.dp, color = Color.Gray, shape = CircleShape)
+            )
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Name + handle
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    color = Color.White,
+                    style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                )
+                Text(
+                    text = "@username",
+                    color = Color.Gray,
+                    fontSize = 12.sp
+                )
+            }
+
+            // Rank
+            Text(
+                text = rank.toString(),
+                color = Color.White,
+                style = TextStyle(fontWeight = FontWeight.ExtraBold, fontSize = 24.sp)
+            )
         }
     }
 }

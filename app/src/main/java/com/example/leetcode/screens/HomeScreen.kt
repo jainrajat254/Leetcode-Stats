@@ -4,30 +4,17 @@ import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.leetcode.models.ViewModel
 import com.example.leetcode.navigation.BottomNavBar
@@ -39,7 +26,7 @@ import com.example.leetcode.utils.TabContent
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     vm: ViewModel,
     navController: NavController,
 ) {
@@ -47,7 +34,7 @@ fun HomeScreen(
         vm.updateAll()
     }
     Scaffold(
-        containerColor = Color.Black,
+        containerColor = Color(0xFF121212),
         content = {
             StreakScreen(
                 modifier = modifier,
@@ -61,42 +48,29 @@ fun HomeScreen(
 
 @Composable
 fun StreakScreen(
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     vm: ViewModel,
     navController: NavController,
 ) {
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(16.dp, bottom = 64.dp),
+            .padding(16.dp),
         verticalArrangement = Arrangement.Top
     ) {
         CustomTopBar(modifier = modifier, text = "Streak")
         Spacer(modifier = modifier.height(16.dp))
         TabContent(
             modifier = modifier,
-            tabs = listOf("JAVA", "CPP"),
+            tabs = listOf("Java", "C++"),
             contentForTab = { selectedTab ->
                 {
-                    when (selectedTab) {
-                        "JAVA" -> {
-                            StudentStreak(
-                                language = "Java",
-                                modifier = modifier,
-                                vm = vm,
-                                navController = navController
-                            )
-                        }
-
-                        "CPP" -> {
-                            StudentStreak(
-                                language = "CPP",
-                                modifier = modifier,
-                                vm = vm,
-                                navController = navController
-                            )
-                        }
-                    }
+                    StudentStreak(
+                        language = selectedTab,
+                        modifier = modifier,
+                        vm = vm,
+                        navController = navController
+                    )
                 }
             }
         )
@@ -106,56 +80,50 @@ fun StreakScreen(
 @Composable
 fun StudentStreak(
     language: String,
-    modifier: Modifier,
+    modifier: Modifier = Modifier,
     vm: ViewModel,
     navController: NavController,
 ) {
-    Spacer(modifier = modifier.padding(top = 16.dp))
-
     var streakMap by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
 
     LaunchedEffect(language) {
-        try {
-            streakMap = vm.hasAttemptedToday(language)
+        streakMap = try {
+            vm.hasAttemptedToday(language)
         } catch (e: Exception) {
-            Log.e("StudentStreak", "Error fetching streak data: ${e.localizedMessage}")
+            emptyMap()
         }
     }
 
     LazyColumn(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1B1B1B), shape = RoundedCornerShape(8.dp))
-            .padding(8.dp)
+        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp)
     ) {
         items(streakMap.keys.toList()) { username ->
-            val indicatorColor = streakMap[username] ?: false
+            val isActive = streakMap[username] ?: false
+            val indicatorColor = if (isActive) Color(0xFF00E676) else Color(0xFFFF5252)
 
-            Card(
-                modifier = modifier
+            Column(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(username)) },
-                shape = RoundedCornerShape(8.dp),
-                elevation = CardDefaults.cardElevation(4.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF2B2B2B))
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(username)) }
+                    .padding(vertical = 12.dp, horizontal = 8.dp)
             ) {
-                val color = if (indicatorColor) Color(0xFF00FF00) else Color(0xFFFF4444)
                 Row(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = username,
-                        color = Color.White
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
                     )
                     Indicator(
-                        modifier = modifier,
-                        color = color
+                        modifier = Modifier,
+                        color = indicatorColor
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Divider(color = Color.Gray, thickness = 0.5.dp)
             }
         }
     }

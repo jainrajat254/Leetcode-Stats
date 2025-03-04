@@ -36,17 +36,17 @@ fun SplashScreen(
             )
         }
 
-        LaunchedEffect(Unit) {
-            delay(2000)
-            val user = getUserFromPreferences(navController.context)
+            LaunchedEffect(Unit) {
+                delay(2000)
+                val user = getUserFromPreferences(navController.context)
 
-            if (user != null) {
-                navController.popBackStack()
-                navController.navigate(Routes.Home.route)
-            } else {
-                navController.popBackStack()
-                navController.navigate(Routes.Login.route) {}
+                if (user != null) {
+                    navController.popBackStack()
+                    navController.navigate(Routes.Home.route)
+                } else {
+                    navController.popBackStack()
+                    navController.navigate(Routes.Login.route) {}
+                }
             }
-        }
     })
 }
