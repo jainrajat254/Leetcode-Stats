@@ -1,28 +1,25 @@
 package com.example.leetcode.screens
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,25 +29,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.leetcode.R
 import com.example.leetcode.data.UserData
 import com.example.leetcode.models.ViewModel
 import com.example.leetcode.routes.Routes
-import com.example.leetcode.utils.AccountCheck
-import com.example.leetcode.utils.CustomButton
+import com.example.leetcode.utils.AuthButton
+import com.example.leetcode.utils.AuthNavigationText
 import com.example.leetcode.utils.CustomTextField
+import com.example.leetcode.utils.HeaderSection
+import com.example.leetcode.utils.PasswordTextField
 
 @Composable
 fun RegisterScreen(
@@ -58,180 +49,172 @@ fun RegisterScreen(
     navController: NavController,
     vm: ViewModel,
 ) {
-    var name by rememberSaveable {
-        mutableStateOf("")
-    }
-    var username by rememberSaveable {
-        mutableStateOf("")
-    }
-    var password by rememberSaveable {
-        mutableStateOf("")
-    }
-    var selectedLanguage by rememberSaveable {
-        mutableStateOf("Java")
-    }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var selectedLanguage by rememberSaveable { mutableStateOf("Java") }
     val context = LocalContext.current
-    var error: String? by remember { mutableStateOf(null) }
+    var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        vm.updateAll()
-    }
+    LaunchedEffect(Unit) { vm.updateAll() }
 
-    Scaffold(containerColor = Color.Black,
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         content = { paddingValues ->
             Column(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .padding(horizontal = 32.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "Register",
-                    textAlign = TextAlign.Center,
-                    style = TextStyle(
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 24.sp
-                    )
-                )
-                Image(
-                    painter = painterResource(id = R.drawable.leetcode),
-                    contentDescription = "Logo",
-                    modifier = modifier
-                        .size(100.dp)
-                        .padding(top = 20.dp)
+                HeaderSection(
+                    title = "Create Account"
                 )
 
-                CustomTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    modifier = modifier,
-                    label = "Name",
-                )
-
-                LanguageDropDownMenu(
-                    modifier = modifier,
-                    selectedLanguage = selectedLanguage,
-                    onLanguageSelected = { newLanguage ->
-                        selectedLanguage = newLanguage
-                    }
-                )
-
-                CustomTextField(
-                    value = username,
-                    onValueChange = { username = it },
-                    modifier = modifier,
-                    label = "Username",
-                )
-                CustomTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    modifier = modifier,
-                    label = "Password",
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    trailingIcon = {
-                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                // Form Section
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Full Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                        ),
+                        leadingIcon = {
                             Icon(
-                                painter = painterResource(
-                                    id = if (passwordVisible) R.drawable.baseline_visibility_24 else R.drawable.baseline_visibility_off_24
-                                ),
-                                contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                                painter = painterResource(R.drawable.baseline_person_24),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    )
+
+                    LanguageDropDownMenu(
+                        selectedLanguage = selectedLanguage,
+                        onLanguageSelected = { selectedLanguage = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    CustomTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = "Username",
+                        leadingIconRes = R.drawable.baseline_alternate_email_24
+                    )
+
+                    PasswordTextField(
+                        password = password,
+                        onPasswordChange = { password = it }
+                    )
+
+
+                    error?.let {
+                        Text(
+                            text = it,
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
                     }
-                )
-                CustomButton(
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Register Button
+                AuthButton(
+                    text = "Register",
                     onClick = {
                         val user = UserData(name, selectedLanguage, username, password)
                         vm.registerUser(
                             user,
                             onSuccess = {
-                                Toast.makeText(context,"Registration Successful\nLog in to continue",Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    context,
+                                    "Registration Successful",
+                                    Toast.LENGTH_SHORT
+                                ).show()
                                 navController.navigate(Routes.Login.route) {
-                                    popUpTo(0) {
-                                        inclusive = true
-                                    }
+                                    popUpTo(0) { inclusive = true }
                                 }
                             },
                             onError = { error = it }
                         )
-                    },
-                    text = "Register",
-                    modifier = modifier
-                        .width(160.dp)
-                        .height(60.dp)
-                        .padding(top = 20.dp)
+                    }
                 )
 
-                Spacer(modifier = modifier.height(20.dp))
-
-                AccountCheck(
+                AuthNavigationText(
                     text = "Already have an account? ",
-                    check = "Login",
-                    navController = navController,
-                    navigateTo = Routes.Login.route,
+                    buttonText = "Sign In",
+                    onClick = { navController.navigate(Routes.Login.route) }
                 )
             }
-        })
+        }
+    )
 }
 
 @Composable
 fun LanguageDropDownMenu(
-    modifier: Modifier,
     selectedLanguage: String,
     onLanguageSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Box {
+    Box(modifier = modifier) {
         OutlinedTextField(
             value = selectedLanguage,
-            onValueChange = { },
-            label = {
-                Text(
-                    text = "Language",
-                    style = TextStyle(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.W500
-                    ),
-                    color = Color.Gray
-                )
-            },
+            onValueChange = {},
+            label = { Text("Programming Language") },
             readOnly = true,
-            shape = RoundedCornerShape(16.dp),
-            modifier = modifier
-                .width(300.dp)
-                .padding(top = 10.dp)
-                .clickable { expanded = true },
             trailingIcon = {
                 Icon(
                     imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "Dropdown Icon",
+                    contentDescription = "Language dropdown",
                     modifier = Modifier.clickable { expanded = true }
                 )
-            }
+            },
+            leadingIcon = {
+                Icon(
+                    painter = painterResource(R.drawable.baseline_code_24),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
         )
+
         DropdownMenu(
             expanded = expanded,
-            onDismissRequest = { expanded = false }
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f)
         ) {
-            DropdownMenuItem(
-                text = { Text("Java") },
-                onClick = {
-                    onLanguageSelected("Java")
-                    expanded = false
-                }
-            )
-            DropdownMenuItem(
-                text = { Text("C++") },
-                onClick = {
-                    onLanguageSelected("C++")
-                    expanded = false
-                }
-            )
+            listOf("Java", "C++").forEach { language ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = language,
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    },
+                    onClick = {
+                        onLanguageSelected(language)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }

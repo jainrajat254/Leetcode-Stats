@@ -36,7 +36,7 @@ fun App() {
             SplashScreen(navController = navController)
         }
         composable(Routes.Login.route) {
-            LoginScreen(navController = navController, vm = vm, modifier = Modifier)
+            LoginScreen(navController = navController, vm = vm)
         }
         composable(Routes.Register.route) {
             RegisterScreen(navController = navController, vm = vm, modifier = Modifier)

@@ -91,6 +91,9 @@ dependencies {
 
     implementation (libs.logging.interceptor)
 
+    implementation(libs.coil.compose)
+
+
 
 
     testImplementation(libs.junit)

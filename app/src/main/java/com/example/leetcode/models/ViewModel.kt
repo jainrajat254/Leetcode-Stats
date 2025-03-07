@@ -3,11 +3,17 @@ package com.example.leetcode.models
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.leetcode.data.LeaderBoard
 import com.example.leetcode.data.LoginCredentials
 import com.example.leetcode.data.LoginResponse
+import com.example.leetcode.data.Socials
 import com.example.leetcode.data.UserData
 import com.example.leetcode.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import javax.inject.Inject
@@ -55,22 +61,20 @@ class ViewModel @Inject constructor(
         }
     }
 
-    suspend fun clubLeaderBoard(): List<String> {
+    suspend fun clubLeaderBoard(): List<LeaderBoard> {
         try {
             return userRepository.clubLeaderBoard()
         } catch (e: Exception) {
-            throw Exception("Error fetching club leaderboard: ${e.message}", e)
+            throw Exception("Error fetching Club Leaderboard: ${e.message}", e)
         }
     }
 
-    suspend fun languageLeaderBoard(selectedLanguage: String): List<String> {
+
+    suspend fun languageLeaderBoard(selectedLanguage: String): List<LeaderBoard> {
         try {
             return userRepository.languageLeaderBoard(selectedLanguage)
         } catch (e: Exception) {
-            throw Exception(
-                "Error fetching language leaderboard for $selectedLanguage: ${e.message}",
-                e
-            )
+            throw Exception("Error fetching Language Leaderboard: ${e.message}", e)
         }
     }
 
@@ -121,6 +125,19 @@ class ViewModel @Inject constructor(
         }
     }
 
+    fun updateUser(username: String) {
+        viewModelScope.launch {
+            try {
+                Log.d("ViewModel", "Updating user: $username")
+                userRepository.updateUser(username)
+                Log.d("ViewModel", "User update successful: $username")
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error updating user", e)
+            }
+        }
+    }
+
+
     suspend fun nameAndLanguage(username: String): List<String> {
         try {
             return userRepository.nameAndLanguage(username)
@@ -128,4 +145,28 @@ class ViewModel @Inject constructor(
             throw Exception("Error fetching name and language for $username: ${e.message}", e)
         }
     }
+
+    suspend fun getUserSocials(username: String): Socials {
+        return coroutineScope { // Ensures we are inside a coroutine scope
+            try {
+                if (!isActive) throw CancellationException("Coroutine cancelled")
+                userRepository.getUserSocials(username) // Example API Call
+            } catch (e: CancellationException) {
+                throw e // Let coroutine cancellation propagate
+            } catch (e: Exception) {
+                Log.e("ViewModel", "Error fetching socials: ${e.message}")
+                Socials("", "", "", "")
+            }
+        }
+    }
+
+    suspend fun getUserProfile(username: String): Socials = coroutineScope {
+        val deferredSocials = async { userRepository.getUserProfile(username) } // Runs in parallel
+        try {
+            deferredSocials.await() // Wait for the result
+        } catch (e: Exception) {
+            throw Exception("Error fetching profile for $username: ${e.message}", e)
+        }
+    }
+
 }

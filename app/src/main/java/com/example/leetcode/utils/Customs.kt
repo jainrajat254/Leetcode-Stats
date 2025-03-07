@@ -3,27 +3,28 @@ package com.example.leetcode.utils
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldColors
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,81 +35,165 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.example.leetcode.R
 import com.example.leetcode.models.ViewModel
 
 @Composable
-fun CustomButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+fun AuthNavigationText(
     text: String,
+    buttonText: String,
+    onClick: () -> Unit
 ) {
-    OutlinedButton(
-        onClick = { onClick() },
-        colors = ButtonDefaults.buttonColors(Color(0xFFC98F1B)),
-        elevation = ButtonDefaults.buttonElevation(8.dp),
-        shape = RoundedCornerShape(16.dp),
-        modifier = modifier
+    Row(
+        modifier = Modifier.padding(top = 24.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            ),
-            color = Color.Black
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        TextButton(onClick = onClick) {
+            Text(
+                text = buttonText,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
     }
 }
 
 @Composable
-fun AccountCheck(
+fun AuthButton(
     text: String,
-    check: String,
-    modifier: Modifier = Modifier,
-    navController: NavController,
-    navigateTo: String,
+    onClick: () -> Unit
 ) {
-    Row(
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary
+        )
     ) {
-        Text(
-            text = text,
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.W500
-            ),
-            color = Color.Gray
-        )
-        Text(
-            text = check,
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.W500
-            ),
-            color = Color(0xFFC98F1B),
-            modifier = modifier.clickable {
-                navController.navigate(navigateTo) {
-                    popUpTo(0) {
-                        inclusive = true
-                    }
-                }
-            }
-        )
+        Text(text, style = MaterialTheme.typography.labelLarge)
     }
 }
+
+@Composable
+fun PasswordTextField(
+    password: String,
+    onPasswordChange: (String) -> Unit
+) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = password,
+        onValueChange = onPasswordChange,
+        label = { Text("Password") },
+        modifier = Modifier.fillMaxWidth(),
+        singleLine = true,
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        ),
+        leadingIcon = {
+            Icon(
+                painter = painterResource(R.drawable.baseline_lock_24),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        trailingIcon = {
+            IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                Icon(
+                    painter = painterResource(
+                        if (passwordVisible) R.drawable.baseline_visibility_24
+                        else R.drawable.baseline_visibility_off_24
+                    ),
+                    contentDescription = "Toggle password visibility",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun CustomTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    leadingIconRes: Int
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        ),
+        leadingIcon = {
+            Icon(
+                painter = painterResource(leadingIconRes),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    )
+}
+
+@Composable
+fun HeaderSection(title: String, subtitle: String? = null) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(bottom = 32.dp)
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.leetcode),
+            contentDescription = "App Logo",
+            modifier = Modifier.size(120.dp),
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineLarge.copy(
+                color = MaterialTheme.colorScheme.onBackground,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        subtitle?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                ),
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+    }
+}
+
+
+
+
 
 @Composable
 fun LastSevenDaysStreak(
@@ -168,134 +253,5 @@ fun Indicator(
         modifier = modifier
             .size(18.dp)
             .background(color, shape = RoundedCornerShape(4.dp))
-    )
-}
-
-@Composable
-fun TabContent(
-    modifier: Modifier,
-    tabs: List<String>,
-    contentForTab: (String) -> @Composable () -> Unit,
-) {
-    var selectedTab by remember { mutableStateOf(tabs.first()) }
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(Color.Black)
-            .padding(horizontal = 8.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        tabs.forEach { tab ->
-            TabItem(
-                label = tab,
-                isSelected = selectedTab == tab,
-                onClick = { selectedTab = tab },
-                modifier = modifier.weight(1f)
-            )
-        }
-    }
-    val content = contentForTab(selectedTab)
-    content()
-}
-
-@Composable
-fun CustomTopBar(
-    modifier: Modifier,
-    text: String,
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 40.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.leetcode),
-            contentDescription = "Logo",
-            modifier = modifier.size(40.dp)
-        )
-        Spacer(modifier = modifier.width(8.dp))
-        Text(
-            text = text,
-            style = TextStyle(
-                fontSize = 24.sp,
-                fontWeight = FontWeight.W500
-            ),
-            color = Color(0xFFC98F1B)
-        )
-    }
-}
-
-@Composable
-fun TabItem(
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier,
-) {
-    Text(
-        text = label,
-        color = if (isSelected) Color.White else Color.Gray,
-        modifier = modifier
-            .padding(8.dp)
-            .background(if (isSelected) Color(0xFF1FD2FA) else Color.Transparent)
-            .clickable(onClick = onClick)
-            .padding(vertical = 8.dp),
-        textAlign = TextAlign.Center
-    )
-}
-
-@Composable
-fun CustomTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    label: String = "",
-    singleLine: Boolean = true,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    shape: Shape = RoundedCornerShape(16.dp),
-    maxLines: Int = 1,
-    colors: TextFieldColors = TextFieldDefaults.colors(
-        focusedContainerColor = Color.Black,
-        unfocusedContainerColor = Color.Black,
-        focusedTextColor = Color.White,
-        unfocusedTextColor = Color.White,
-        focusedIndicatorColor = Color(0xFFC98F1B),
-        unfocusedIndicatorColor = Color.Gray,
-        cursorColor = Color(0xFFC98F1B),
-        errorCursorColor = Color.Red,
-        errorIndicatorColor = Color.Red,
-        errorLabelColor = Color.Red
-    ),
-    visualTransformation: VisualTransformation = VisualTransformation.None,
-    trailingIcon: @Composable (() -> Unit)? = null
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier
-            .width(300.dp)
-            .padding(top = 10.dp),
-        label = {
-            Text(
-                text = label,
-                style = TextStyle(
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.W500
-                ),
-                color = Color.Gray
-            )
-        },
-        shape = shape,
-        singleLine = singleLine,
-        keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions,
-        maxLines = maxLines,
-        colors = colors,
-        visualTransformation = visualTransformation,
-        trailingIcon = trailingIcon
     )
 }

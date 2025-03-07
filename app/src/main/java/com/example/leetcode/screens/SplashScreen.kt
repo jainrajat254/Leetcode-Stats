@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,29 +26,39 @@ import kotlinx.coroutines.delay
 fun SplashScreen(
     navController: NavController,
 ) {
-    Scaffold(containerColor = Color.Black, content = {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.leetcode),
-                contentDescription = "Logo",
-                modifier = Modifier.size(300.dp)
-            )
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        content = {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.leetcode),
+                    contentDescription = "App Logo",
+                    modifier = Modifier
+                        .size(200.dp)
+                        .padding(32.dp)
+                )
+            }
+        }
+    )
+
+    LaunchedEffect(Unit) {
+        delay(1500) // Reduced duration for better UX
+        val user = try {
+            getUserFromPreferences(navController.context)
+        } catch (e: Exception) {
+            null
         }
 
-            LaunchedEffect(Unit) {
-                delay(2000)
-                val user = getUserFromPreferences(navController.context)
-
-                if (user != null) {
-                    navController.popBackStack()
-                    navController.navigate(Routes.Home.route)
-                } else {
-                    navController.popBackStack()
-                    navController.navigate(Routes.Login.route) {}
-                }
+        navController.navigate(
+            if (user != null) Routes.Home.route
+            else Routes.Login.route
+        ) {
+            popUpTo(Routes.Splash.route) {
+                inclusive = true
             }
-    })
+        }
+    }
 }
