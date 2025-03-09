@@ -1,9 +1,8 @@
 package com.example.leetcode.data
 
-data class LeaderBoard(
+data class StreakContent(
     val name: String,
-    val totalSolved: Int,
+    val submittedToday: Boolean,
     val userAvatar: String,
     val username: String
 )
-

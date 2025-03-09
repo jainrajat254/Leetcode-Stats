@@ -7,16 +7,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -29,197 +30,151 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.example.leetcode.models.ViewModel
+import coil.compose.AsyncImage
+import com.example.leetcode.data.StreakContent
+import com.example.leetcode.models.UserViewModel
 import com.example.leetcode.navigation.BottomNavBar
 import com.example.leetcode.routes.Routes
+import com.example.leetcode.utils.CommonTopBar
+import com.example.leetcode.utils.EmptyState
+import com.example.leetcode.utils.LoadingScreen
+import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(
-    modifier: Modifier = Modifier,
-    vm: ViewModel,
-    navController: NavController,
-) {
+fun HomeScreen(vm: UserViewModel, navController: NavController) {
     LaunchedEffect(Unit) { vm.updateAll() }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = { BottomNavBar(navController = navController) },
         content = {
-            StreakScreen(
-                modifier = modifier,
-                vm = vm,
-                navController = navController
-            )
-        },
-        bottomBar = { BottomNavBar(modifier = modifier, navController = navController) }
+            StreakScreen(vm = vm, navController = navController)
+        }
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StreakScreen(
-    modifier: Modifier = Modifier,
-    vm: ViewModel,
-    navController: NavController,
-) {
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+fun StreakScreen(vm: UserViewModel, navController: NavController) {
     val languages = listOf("Java", "C++")
+    val pagerState = rememberPagerState { languages.size }
+    val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.Top
-    ) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "Streak",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
-        )
+    Column(modifier = Modifier.fillMaxSize()) {
+        CommonTopBar(title = "Streak") // Using the reusable top bar
 
-        TabRow(
-            selectedTabIndex = selectedTabIndex,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
+        TabRow(selectedTabIndex = pagerState.currentPage) {
             languages.forEachIndexed { index, title ->
                 Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = {
-                        Text(
-                            text = title.uppercase(),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = if (selectedTabIndex == index)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    }
+                    selected = pagerState.currentPage == index,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                    text = { Text(title.uppercase()) }
                 )
             }
         }
 
-        StudentStreak(
-            language = languages[selectedTabIndex],
-            modifier = modifier,
-            vm = vm,
-            navController = navController
-        )
+        HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
+            StudentStreak(language = languages[page], vm = vm, navController = navController)
+        }
     }
 }
 
+
 @Composable
-fun StudentStreak(
-    language: String,
-    modifier: Modifier = Modifier,
-    vm: ViewModel,
-    navController: NavController,
-) {
-    var streakMap by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
-    var loading by remember { mutableStateOf(true) }
+fun StudentStreak(language: String, vm: UserViewModel, navController: NavController) {
+    var streakList by remember { mutableStateOf<List<StreakContent>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(language) {
-        streakMap = try {
-            vm.hasAttemptedToday(language).also { loading = false }
+        streakList = try {
+            vm.hasAttemptedToday(language)
         } catch (e: Exception) {
-            loading = false
-            emptyMap()
+            emptyList()
         }
+        isLoading = false
     }
 
     when {
-        loading -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
-        }
+        isLoading -> LoadingScreen()
+        streakList.isEmpty() -> EmptyState("No streak data available")
+        else -> StreakList(streakList, navController)
+    }
+}
 
-        streakMap.isEmpty() -> {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = "No streak data available",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            }
-        }
-
-        else -> {
-            LazyColumn(
-                modifier = modifier
-                    .fillMaxSize()
-                    .padding(16.dp, bottom = 60.dp, top = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(streakMap.entries.toList()) { (username, isActive) ->
-                    StreakListItem(
-                        username = username,
-                        isActive = isActive,
-                        onClick = { navController.navigate(Routes.OtherProfile.createRoute(username)) }
-                    )
-                }
-            }
+@Composable
+fun StreakList(streaks: List<StreakContent>, navController: NavController) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp, bottom = 0.dp, top = 20.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(streaks) { streak ->
+            StreakListItem(
+                name = streak.name,
+                username = streak.username,
+                isActive = streak.submittedToday,
+                userAvatar = streak.userAvatar,
+                onClick = { navController.navigate(Routes.OtherProfile.createRoute(streak.username)) }
+            )
         }
     }
 }
 
 @Composable
-private fun StreakListItem(
+fun StreakListItem(
+    name: String,
     username: String,
     isActive: Boolean,
+    userAvatar: String,
     onClick: () -> Unit,
 ) {
-    Card(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(4.dp),
-        shape = RoundedCornerShape(8.dp)
+            .clickable { onClick() }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        AsyncImage(
+            model = userAvatar,
+            contentDescription = "Profile Picture",
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+                .size(50.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = username,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium
-                )
+                text = name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold
             )
-
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(
-                        color = if (isActive) Color(0x9900FF00)
-                        else Color(0x99FF4444),
-                        shape = CircleShape
-                    )
+            Text(
+                text = "@$username",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Box(
+            modifier = Modifier
+                .size(12.dp)
+                .clip(CircleShape)
+                .background(if (isActive) Color(0xFF65E26A) else Color(0xFFE45D5D))
+        )
     }
 }
+
+

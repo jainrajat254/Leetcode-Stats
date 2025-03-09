@@ -10,7 +10,7 @@ import javax.inject.Inject
 class AuthInterceptor @Inject constructor(@ApplicationContext private val context: Context) :
     Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val token = SharedPreferencesManager.getJwtToken(context)
+        val token = SharedPreferencesManager.getJwtToken()
 
         println(token)
 

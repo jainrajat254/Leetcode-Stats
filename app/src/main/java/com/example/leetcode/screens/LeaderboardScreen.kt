@@ -28,9 +28,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,101 +45,106 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.leetcode.R
 import com.example.leetcode.data.LeaderBoard
-import com.example.leetcode.models.ViewModel
+import com.example.leetcode.models.UserViewModel
 import com.example.leetcode.navigation.BottomNavBar
 import com.example.leetcode.routes.Routes
+import com.example.leetcode.utils.CommonTopBar
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun LeaderboardScreen(
-    modifier: Modifier = Modifier,
-    vm: ViewModel,
+    vm: UserViewModel,
     navController: NavController = rememberNavController(),
 ) {
     LaunchedEffect(true) { vm.updateAll() }
 
-    Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
-        content = { paddingValues ->
+    Scaffold(containerColor = MaterialTheme.colorScheme.background,
+        content = {
             LeaderboardContent(
-                modifier = modifier,
-                vm = vm,
-                navController = navController
+                vm = vm, navController = navController
             )
-        },
-        bottomBar = {
-            BottomNavBar(
-                modifier = Modifier.fillMaxWidth(),
-                navController = navController
-            )
-        }
-    )
+        }, bottomBar = {
+            BottomNavBar(navController = navController)
+        })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaderboardContent(
-    modifier: Modifier = Modifier,
-    vm: ViewModel,
-    navController: NavController
+    vm: UserViewModel,
+    navController: NavController,
 ) {
-    val pagerState = rememberPagerState { 2 }
-    val scope = rememberCoroutineScope()
+    val tabs = listOf("Club", "Language")
+    val pagerState = rememberPagerState { tabs.size }
+    val coroutineScope = rememberCoroutineScope()
 
-    Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
-            title = {
-                Text(
-                    text = "LeaderBoard",
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                )
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = MaterialTheme.colorScheme.background
-            )
-        )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 8.dp),
+        verticalArrangement = Arrangement.Top
+    ) {
+        CommonTopBar(title = "Leaderboard") // Using the reusable top bar
 
-        // Tabs for Club and Language
+        Spacer(modifier = Modifier.height(8.dp))
+
         TabRow(
             selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.surface,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            listOf("Club", "Language").forEachIndexed { index, title ->
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary,
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    Modifier
+                        .tabIndicatorOffset(tabPositions[pagerState.currentPage])
+                        .height(3.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }) {
+            tabs.forEachIndexed { index, title ->
                 Tab(
                     selected = pagerState.currentPage == index,
-                    onClick = { scope.launch { pagerState.animateScrollToPage(index) } }
-                ) {
-                    Text(title, style = MaterialTheme.typography.bodyMedium)
-                }
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
+                    text = {
+                        Text(
+                            text = title.uppercase(),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.Medium,
+                                color = if (pagerState.currentPage == index)
+                                    MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+                )
             }
         }
 
-        // HorizontalPager for tab content
-        HorizontalPager(state = pagerState) { page ->
+        Spacer(modifier = Modifier.height(12.dp))
+
+        HorizontalPager(
+            state = pagerState, modifier = Modifier.weight(1f)
+        ) { page ->
             when (page) {
                 0 -> ClubLeaderboard(vm, navController)
                 1 -> LanguageLeaderboard(vm, navController)
             }
         }
     }
-
 }
+
 
 @Composable
 private fun LeaderboardList(
     leaderboard: List<LeaderBoard>,
-    navController: NavController
+    navController: NavController,
 ) {
     if (leaderboard.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -167,97 +172,8 @@ private fun LeaderboardList(
 
 
 @Composable
-private fun LanguageLeaderboard(
-    vm: ViewModel,
-    navController: NavController,
-) {
-    var selectedLanguage by remember { mutableStateOf("Java") }
-    var loading by remember { mutableStateOf(true) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var leaderboardEntries by remember { mutableStateOf<List<LeaderBoard>>(emptyList()) }
-
-    val languages = listOf("Java", "C++")
-
-    // Fetch leaderboard data when the language changes
-    LaunchedEffect(selectedLanguage) {
-        loading = true
-        error = null
-        try {
-            leaderboardEntries = vm.languageLeaderBoard(selectedLanguage)
-        } catch (e: Exception) {
-            error = e.message
-        } finally {
-            loading = false
-        }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp)
-    ) {
-        TabRow(
-            selectedTabIndex = languages.indexOf(selectedLanguage),
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            languages.forEachIndexed { index, language ->
-                Tab(
-                    selected = selectedLanguage == language,
-                    onClick = { selectedLanguage = language },
-                    text = { Text(language, style = MaterialTheme.typography.bodyMedium) }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        when {
-            loading -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-            error != null -> Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Error: $error", color = Color.Red)
-            }
-            else -> LeaderboardList(leaderboardEntries, navController)
-        }
-    }
-}
-
-
-@Composable
-fun LoadableContent(
-    loading: Boolean,
-    error: String?,
-    content: @Composable () -> Unit
-) {
-    when {
-        loading -> Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-
-        error != null -> Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = error, color = MaterialTheme.colorScheme.error)
-        }
-
-        else -> content()
-    }
-}
-
-
-@Composable
 private fun ClubLeaderboard(
-    vm: ViewModel,
+    vm: UserViewModel,
     navController: NavController,
 ) {
     var loading by remember { mutableStateOf(true) }
@@ -265,6 +181,8 @@ private fun ClubLeaderboard(
     var leaderboardEntries by remember { mutableStateOf<List<LeaderBoard>>(emptyList()) }
 
     LaunchedEffect(Unit) {
+        loading = true
+        error = null
         try {
             leaderboardEntries = vm.clubLeaderBoard()
         } catch (e: Exception) {
@@ -274,13 +192,128 @@ private fun ClubLeaderboard(
         }
     }
 
+    LeaderboardContent(
+        loading = loading,
+        error = error,
+        leaderboardEntries = leaderboardEntries,
+        navController = navController
+    )
+}
+
+@Composable
+private fun LanguageLeaderboard(
+    vm: UserViewModel,
+    navController: NavController,
+) {
+    val languages = listOf("Java", "C++")
+    val pagerState = rememberPagerState { languages.size }
+    val coroutineScope = rememberCoroutineScope()
+
+    var loading by remember { mutableStateOf(true) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var leaderboardEntries by remember { mutableStateOf<List<LeaderBoard>>(emptyList()) }
+
+    // Update data when the selected tab changes
+    LaunchedEffect(pagerState.currentPage) {
+        loading = true
+        error = null
+        try {
+            val selectedLanguage = languages[pagerState.currentPage]
+            leaderboardEntries = vm.languageLeaderBoard(selectedLanguage)
+        } catch (e: Exception) {
+            error = e.message
+        } finally {
+            loading = false
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        TabRow(
+            selectedTabIndex = pagerState.currentPage,
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary
+        ) {
+            languages.forEachIndexed { index, title ->
+                Tab(selected = pagerState.currentPage == index, onClick = {
+                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                }, text = {
+                    Text(
+                        text = title.uppercase(),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            color = if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                })
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        HorizontalPager(
+            state = pagerState, modifier = Modifier.weight(1f)
+        ) { page ->
+            LeaderboardContent(
+                loading = loading,
+                error = error,
+                leaderboardEntries = leaderboardEntries,
+                navController = navController
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun LeaderboardContent(
+    loading: Boolean,
+    error: String?,
+    leaderboardEntries: List<LeaderBoard>,
+    navController: NavController,
+) {
     when {
-        loading -> CircularProgressIndicator(modifier = Modifier.fillMaxSize())
-        error != null -> Text("Error: $error", color = Color.Red, modifier = Modifier.fillMaxSize())
+        loading -> Box(
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+
+        error != null -> Box(
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+        ) {
+            Text("Error: $error", color = Color.Red)
+        }
+
         else -> LeaderboardList(leaderboardEntries, navController)
     }
 }
 
+@Composable
+fun LoadableContent(
+    loading: Boolean,
+    error: String?,
+    content: @Composable () -> Unit,
+) {
+    when {
+        loading -> Box(
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+
+        error != null -> Box(
+            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
+        ) {
+            Text(text = error, color = MaterialTheme.colorScheme.error)
+        }
+
+        else -> content()
+    }
+}
 
 @Composable
 private fun TopThreeSection(
@@ -301,23 +334,21 @@ private fun TopThreeSection(
         verticalAlignment = Alignment.Bottom
     ) {
         users.forEachIndexed { index, user ->
-            val imageSize = if (index == 0) 100.dp else if (index == 1)  80.dp else 60.dp // Make the 1st place larger
-            val columnHeight = if (index == 0) 160.dp else if (index == 1) 140.dp else 120.dp// Increase height for 1st
+            val imageSize =
+                if (index == 0) 100.dp else if (index == 1) 80.dp else 60.dp // Largest for 1st place
+            val columnHeight =
+                if (index == 0) 160.dp else if (index == 1) 140.dp else 120.dp // Taller for 1st
 
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+            Column(horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .width(100.dp)
                     .height(columnHeight)
-                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(user.username)) }
-            ) {
+                    .clickable { navController.navigate(Routes.OtherProfile.createRoute(user.username)) }) {
                 Box(
                     modifier = Modifier
                         .size(imageSize)
                         .border(
-                            3.dp,
-                            medalColors[index],
-                            CircleShape
+                            3.dp, medalColors[index], CircleShape
                         )
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -332,18 +363,27 @@ private fun TopThreeSection(
 
                 Spacer(Modifier.height(8.dp))
 
-                Text(
-                    text = user.username,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Name (Bold, prominent)
+                    Text(
+                        text = user.name, style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ), maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
-                )
+
+                    // Username (Dimmed, smaller)
+                    Text(
+                        text = "@${user.username}", style = MaterialTheme.typography.bodySmall.copy(
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            fontWeight = FontWeight.Light
+                        ), maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
 }
-
 
 @Composable
 private fun LeaderboardItem(
@@ -361,7 +401,7 @@ private fun LeaderboardItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -377,24 +417,34 @@ private fun LeaderboardItem(
                 error = painterResource(id = R.drawable.baseline_person_24)
             )
 
-            // Username (with weight to take remaining space)
-            Text(
-                text = entry.username,
-                style = MaterialTheme.typography.titleMedium,
+            // Name & Username Column
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 16.dp)
-            )
-
-            // Rank on the Right
-            Text(
-                text = "#$rank",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    .padding(horizontal = 12.dp)
+            ) {
+                // Name (Bold, prominent)
+                Text(
+                    text = entry.name, style = MaterialTheme.typography.bodyLarge.copy(
+                        fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface
+                    ), maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
+
+                // Username (Smaller & dimmed)
+                Text(
+                    text = "@${entry.username}", style = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        fontWeight = FontWeight.Light
+                    )
+                )
+            }
+
+            // Rank on the Right (Takes Less Space)
+            Text(
+                text = "#$rank", style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary
+                ), modifier = Modifier.padding(start = 8.dp)
             )
         }
     }
 }
-

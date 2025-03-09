@@ -3,41 +3,38 @@ package com.example.leetcode.models
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.leetcode.data.LeaderBoard
-import com.example.leetcode.data.LoginCredentials
-import com.example.leetcode.data.LoginResponse
-import com.example.leetcode.data.Socials
-import com.example.leetcode.data.UserData
+import com.example.leetcode.data.*
 import com.example.leetcode.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import retrofit2.HttpException
 import javax.inject.Inject
 
 @HiltViewModel
-class ViewModel @Inject constructor(
+class UserViewModel @Inject constructor(
     private val userRepository: UserRepository,
 ) : ViewModel() {
 
-    fun registerUser(
-        user: UserData,
-        onSuccess: () -> Unit,
-        onError: (String) -> Unit,
-    ) {
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> get() = _isLoading
+
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> get() = _errorMessage
+
+    fun registerUser(user: UserData, onSuccess: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 userRepository.registerUser(user)
                 onSuccess()
-            } catch (e: HttpException) {
-                Log.d("ViewModel", e.toString())
-                onError("HTTP Error during registration: ${e.message()}")
             } catch (e: Exception) {
-                Log.d("ViewModel", e.toString())
-                onError("Unexpected error during registration: ${e.message}")
+                val message = extractErrorMessage(e)
+                _errorMessage.value = message
+                onError(message)
+            } finally {
+                _isLoading.value = false
             }
         }
     }
@@ -48,125 +45,139 @@ class ViewModel @Inject constructor(
         onError: (String) -> Unit,
     ) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
                 val userResponse = userRepository.loginUser(user)
                 onSuccess(userResponse)
-            } catch (e: HttpException) {
-                Log.d("ViewModel", e.toString())
-                onError("HTTP Error during login: ${e.message()}")
             } catch (e: Exception) {
-                Log.d("ViewModel", e.toString())
-                onError("Unexpected error during login: ${e.message}")
+                val message = extractErrorMessage(e)
+                _errorMessage.value = message
+                onError(message)
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    suspend fun clubLeaderBoard(): List<LeaderBoard> {
-        try {
-            return userRepository.clubLeaderBoard()
-        } catch (e: Exception) {
-            throw Exception("Error fetching Club Leaderboard: ${e.message}", e)
-        }
-    }
+    suspend fun clubLeaderBoard(): List<LeaderBoard> =
+        handleApiCall { userRepository.clubLeaderBoard() }
 
+    suspend fun languageLeaderBoard(lang: String): List<LeaderBoard> =
+        handleApiCall { userRepository.languageLeaderBoard(lang) }
 
-    suspend fun languageLeaderBoard(selectedLanguage: String): List<LeaderBoard> {
-        try {
-            return userRepository.languageLeaderBoard(selectedLanguage)
-        } catch (e: Exception) {
-            throw Exception("Error fetching Language Leaderboard: ${e.message}", e)
-        }
-    }
+    suspend fun hasAttemptedToday(lang: String): List<StreakContent> =
+        handleApiCall { userRepository.hasAttemptedToday(lang) }
 
-    suspend fun hasAttemptedToday(selectedLanguage: String): Map<String, Boolean> {
-        try {
-            return userRepository.hasAttemptedToday(selectedLanguage)
-        } catch (e: Exception) {
-            throw Exception(
-                "Error checking today's attempts for $selectedLanguage: ${e.message}",
-                e
-            )
-        }
-    }
+    suspend fun questionsCount(lang: String): List<Stats> =
+        handleApiCall { userRepository.questionsCount(lang) }
 
-    suspend fun questionsCount(selectedLanguage: String): Map<String, Int> {
-        try {
-            return userRepository.questionsCount(selectedLanguage)
-        } catch (e: Exception) {
-            throw Exception("Error fetching question count for $selectedLanguage: ${e.message}", e)
-        }
-    }
+    suspend fun lastThirtyDays(username: String): List<Boolean> =
+        handleApiCall { userRepository.lastThirtyDays(username) }
 
-    suspend fun lastSevenDays(username: String): List<Boolean> {
-        return try {
-            userRepository.lastSevenDays(username)
-        } catch (e: Exception) {
-            Log.e(
-                "UserViewModel",
-                "Error fetching last seven days data for $username: ${e.message}"
-            )
-            emptyList()
-        }
-    }
+    suspend fun questionsSolved(username: String): List<String> =
+        handleApiCall { userRepository.questionsSolved(username) }
 
-    suspend fun questionsSolved(username: String): List<String> {
-        try {
-            return userRepository.questionsSolved(username)
-        } catch (e: Exception) {
-            throw Exception("Error fetching solved questions for $username: ${e.message}", e)
-        }
-    }
+    suspend fun nameAndLanguage(username: String): List<String> =
+        handleApiCall { userRepository.nameAndLanguage(username) }
 
-    suspend fun updateAll() {
-        try {
-            userRepository.updateAll()
-        } catch (e: Exception) {
-            throw Exception("Error updating all data: ${e.message}", e)
-        }
-    }
+    suspend fun getUserSocials(username: String): Socials =
+        handleApiCall { userRepository.getUserSocials(username) }
+
+    suspend fun getUserProfile(username: String): Socials =
+        handleApiCall { userRepository.getUserProfile(username) }
 
     fun updateUser(username: String) {
         viewModelScope.launch {
+            _isLoading.value = true
             try {
-                Log.d("ViewModel", "Updating user: $username")
                 userRepository.updateUser(username)
-                Log.d("ViewModel", "User update successful: $username")
             } catch (e: Exception) {
-                Log.e("ViewModel", "Error updating user", e)
+                _errorMessage.value = extractErrorMessage(e)
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-
-    suspend fun nameAndLanguage(username: String): List<String> {
-        try {
-            return userRepository.nameAndLanguage(username)
-        } catch (e: Exception) {
-            throw Exception("Error fetching name and language for $username: ${e.message}", e)
-        }
-    }
-
-    suspend fun getUserSocials(username: String): Socials {
-        return coroutineScope { // Ensures we are inside a coroutine scope
+    fun updateAll() {
+        viewModelScope.launch {
+            _isLoading.value = true
             try {
-                if (!isActive) throw CancellationException("Coroutine cancelled")
-                userRepository.getUserSocials(username) // Example API Call
-            } catch (e: CancellationException) {
-                throw e // Let coroutine cancellation propagate
+                userRepository.updateAll()
             } catch (e: Exception) {
-                Log.e("ViewModel", "Error fetching socials: ${e.message}")
-                Socials("", "", "", "")
+                _errorMessage.value = extractErrorMessage(e)
+            } finally {
+                _isLoading.value = false
             }
         }
     }
 
-    suspend fun getUserProfile(username: String): Socials = coroutineScope {
-        val deferredSocials = async { userRepository.getUserProfile(username) } // Runs in parallel
-        try {
-            deferredSocials.await() // Wait for the result
-        } catch (e: Exception) {
-            throw Exception("Error fetching profile for $username: ${e.message}", e)
+    private suspend fun <T> handleApiCall(apiCall: suspend () -> T): T {
+        return withContext(Dispatchers.IO) {
+            try {
+                _isLoading.value = true
+                apiCall()
+            } catch (e: Exception) {
+                _errorMessage.value = extractErrorMessage(e)
+                throw e
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
+    private fun extractErrorMessage(e: Exception): String {
+        return when (e) {
+            is HttpException -> e.response()?.errorBody()?.string() ?: "Network error occurred"
+            is CancellationException -> "Request was cancelled"
+            else -> e.localizedMessage ?: "An unexpected error occurred"
+        }
+    }
+
+    fun editPassword(
+        data: EditPassword,
+        userId: String,
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: Result<String> = userRepository.editPassword(data, userId)
+
+                Log.d("editPassword", "Response: $response")  // Debug log
+
+                response.onSuccess { message ->
+                    Log.d("editPassword", "Success: $message")
+                    onSuccess(message)
+                }.onFailure { exception ->
+                    Log.d("editPassword", "Failure: ${exception.message}") // Debug log
+                    onError(exception.message ?: "Error occurred during password update")
+                }
+            } catch (e: Exception) {
+                Log.e("editPassword", "Unexpected error", e)
+                onError("Unexpected error: ${e.message}")
+            }
+        }
+    }
+
+    fun userDetails(
+        data: EditDetails,
+        userId: String,
+        onSuccess: (String) -> Unit,
+        onError: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val response: Result<String> = userRepository.userDetails(data, userId)
+                response.onSuccess { message ->
+                    onSuccess(message)  // Send success message back to UI
+                }.onFailure { exception ->
+                    onError(exception.message ?: "Error occurred during details update")
+                }
+                Log.d("userDetails", "$data  $userId")
+            } catch (e: Exception) {
+                onError("Unexpected error: ${e.message}")
+            }
+        }
+    }
 }

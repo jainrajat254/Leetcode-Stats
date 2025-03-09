@@ -33,12 +33,13 @@ object NetworkModule {
             .build()
     }
 
-    private val gson = GsonBuilder()
+    val gson = GsonBuilder()
         .setLenient()
+        .serializeNulls()
         .create()
 
     private const val BASE_URL =
-        "https://55ed-2409-40d2-1037-dcba-65d3-ec77-a179-df7b.ngrok-free.app"
+        "https://74ab-2409-40d2-1022-7b4b-95e-5236-860b-e3a6.ngrok-free.app"
 
     @Provides
     @Singleton

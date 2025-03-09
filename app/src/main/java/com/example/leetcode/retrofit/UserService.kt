@@ -1,14 +1,19 @@
 package com.example.leetcode.retrofit
 
+import com.example.leetcode.data.EditDetails
+import com.example.leetcode.data.EditPassword
 import com.example.leetcode.data.LeaderBoard
 import com.example.leetcode.data.LoginCredentials
 import com.example.leetcode.data.LoginResponse
 import com.example.leetcode.data.Socials
 import com.example.leetcode.data.UserData
+import com.example.leetcode.data.Stats
+import com.example.leetcode.data.StreakContent
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 
 interface UserService {
@@ -26,10 +31,10 @@ interface UserService {
     suspend fun languageLeaderBoard(@Path("selectedLanguage") selectedLanguage: String): Response<List<LeaderBoard>>
 
     @GET("/hasAttemptedToday/{selectedLanguage}")
-    suspend fun hasAttemptedToday(@Path("selectedLanguage") selectedLanguage: String): Response<Map<String, Boolean>>
+    suspend fun hasAttemptedToday(@Path("selectedLanguage") selectedLanguage: String): Response<List<StreakContent>>
 
-    @GET("/lastSevenDays/{username}")
-    suspend fun lastSevenDays(@Path("username") username: String): Response<List<Boolean>>
+    @GET("/lastThirtyDays/{username}")
+    suspend fun lastThirtyDays(@Path("username") username: String): Response<List<Boolean>>
 
     @GET("/data/updateAll")
     suspend fun updateAll(): Response<Unit>
@@ -44,11 +49,17 @@ interface UserService {
     suspend fun nameAndLanguage(@Path("username") username: String): Response<List<String>>
 
     @GET("/questionsCount/{selectedLanguage}")
-    suspend fun questionsCount(@Path("selectedLanguage") selectedLanguage: String): Response<Map<String, Int>>
+    suspend fun questionsCount(@Path("selectedLanguage") selectedLanguage: String): Response<List<Stats>>
 
     @GET("/getUserSocials/{username}")
     suspend fun getUserSocials(@Path("username") username: String): Response<Socials>
 
     @GET("/getUserProfile/{username}")
     suspend fun getUserProfile(@Path("username") username: String): Response<Socials>
+
+    @PUT("/editPassword/{id}")
+    suspend fun editPassword(@Path("id") id: String, @Body data: EditPassword): Response<String>
+
+    @PUT("/userDetails/{id}")
+    suspend fun userDetails(@Path("id") id: String, @Body data: EditDetails): Response<String>
 }
