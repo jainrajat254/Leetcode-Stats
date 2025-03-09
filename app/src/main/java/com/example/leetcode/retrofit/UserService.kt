@@ -60,6 +60,6 @@ interface UserService {
     @PUT("/editPassword/{id}")
     suspend fun editPassword(@Path("id") id: String, @Body data: EditPassword): Response<String>
 
-    @PUT("/userDetails/{id}")
-    suspend fun userDetails(@Path("id") id: String, @Body data: EditDetails): Response<String>
+    @PUT("/editDetails/{id}")
+    suspend fun editDetails(@Path("id") id: String, @Body data: EditDetails): Response<LoginResponse>
 }

@@ -3,12 +3,23 @@ package com.example.leetcode.models
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.leetcode.data.*
+import com.example.leetcode.data.EditDetails
+import com.example.leetcode.data.EditPassword
+import com.example.leetcode.data.LeaderBoard
+import com.example.leetcode.data.LoginCredentials
+import com.example.leetcode.data.LoginResponse
+import com.example.leetcode.data.Socials
+import com.example.leetcode.data.Stats
+import com.example.leetcode.data.StreakContent
+import com.example.leetcode.data.UserData
 import com.example.leetcode.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import javax.inject.Inject
 
@@ -18,7 +29,7 @@ class UserViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _isLoading = MutableStateFlow(false)
-    val isLoading: StateFlow<Boolean> get() = _isLoading
+    val isLoading: StateFlow<Boolean> = _isLoading
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> get() = _errorMessage
@@ -80,8 +91,8 @@ class UserViewModel @Inject constructor(
     suspend fun nameAndLanguage(username: String): List<String> =
         handleApiCall { userRepository.nameAndLanguage(username) }
 
-    suspend fun getUserSocials(username: String): Socials =
-        handleApiCall { userRepository.getUserSocials(username) }
+            suspend fun getUserSocials(username: String): Socials =
+                handleApiCall { userRepository.getUserSocials(username) }
 
     suspend fun getUserProfile(username: String): Socials =
         handleApiCall { userRepository.getUserProfile(username) }
@@ -160,7 +171,7 @@ class UserViewModel @Inject constructor(
         }
     }
 
-    fun userDetails(
+    fun editDetails(
         data: EditDetails,
         userId: String,
         onSuccess: (String) -> Unit,
@@ -168,16 +179,14 @@ class UserViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             try {
-                val response: Result<String> = userRepository.userDetails(data, userId)
-                response.onSuccess { message ->
-                    onSuccess(message)  // Send success message back to UI
-                }.onFailure { exception ->
-                    onError(exception.message ?: "Error occurred during details update")
-                }
-                Log.d("userDetails", "$data  $userId")
+                val response: LoginResponse = userRepository.editDetails(data = data, userId = userId)
+                onSuccess("Profile updated successfully")
             } catch (e: Exception) {
-                onError("Unexpected error: ${e.message}")
+                Log.e("editPassword", "Unexpected error", e)
+                onError(e.message ?: "Unexpected error occurred")
+            } finally {
             }
         }
     }
+
 }

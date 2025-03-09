@@ -25,11 +25,15 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -681,3 +686,103 @@ fun CommonTopBar(title: String) {
     )
 }
 
+
+@Composable
+fun GenericDropDownMenu(
+    selectedItem: String,
+    onItemSelected: (String) -> Unit,
+    label: String,
+    items: List<String>,
+    leadingIconRes: Int? = null,
+    trailingIconRes: ImageVector = Icons.Default.ArrowDropDown, // Default to ArrowDropDown icon
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = selectedItem,
+            onValueChange = {},
+            label = { Text(label) },
+            readOnly = true,
+            trailingIcon = {
+                Icon(
+                    imageVector = trailingIconRes,
+                    contentDescription = "Dropdown",
+                    modifier = Modifier.clickable { expanded = true }
+                )
+            },
+            leadingIcon = leadingIconRes?.let {
+                {
+                    Icon(
+                        painter = painterResource(it),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true }
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.fillMaxWidth(0.9f)
+        ) {
+            items.forEach { item ->
+                DropdownMenuItem(
+                    text = {
+                        Text(text = item, style = MaterialTheme.typography.bodyLarge)
+                    },
+                    onClick = {
+                        onItemSelected(item)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun LanguageDropDownMenu(
+    selectedLanguage: String,
+    onLanguageSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericDropDownMenu(
+        selectedItem = selectedLanguage,
+        onItemSelected = onLanguageSelected,
+        label = "Programming Language",
+        items = listOf("Java", "C++"),
+        leadingIconRes = R.drawable.baseline_code_24, // Custom icon for languages
+        modifier = modifier
+    )
+}
+
+@Composable
+fun YearDropDownMenu(
+    selectedYear: String,
+    onYearSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    GenericDropDownMenu(
+        selectedItem = selectedYear,
+        onItemSelected = onYearSelected,
+        label = "Current Year",
+        items = listOf(
+            "First Year",
+            "Second Year",
+            "Third Year",
+            "Fourth Year",
+            "Graduated"
+        ),
+        leadingIconRes = R.drawable.baseline_edit_calendar_24,
+        modifier = modifier
+    )
+}

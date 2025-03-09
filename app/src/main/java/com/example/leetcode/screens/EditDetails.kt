@@ -10,16 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -35,10 +29,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.leetcode.R
 import com.example.leetcode.data.EditDetails
 import com.example.leetcode.models.UserViewModel
 import com.example.leetcode.routes.Routes
 import com.example.leetcode.sharedPreferences.SharedPreferencesManager
+import com.example.leetcode.utils.CustomTextField
+import com.example.leetcode.utils.LanguageDropDownMenu
+import com.example.leetcode.utils.YearDropDownMenu
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +50,7 @@ fun EditProfileScreen(
     val id by remember { mutableStateOf(user?.id ?: "") }
     var name by remember { mutableStateOf(user?.name ?: "") }
     var username by remember { mutableStateOf(user?.username ?: "") }
-    var selectedYear by remember { mutableStateOf(user?.year ?: "") }
+    var selectedYear by remember { mutableStateOf(user?.year ?: "Java") }
     var selectedLanguage by remember { mutableStateOf(user?.selectedLanguage ?: "") }
     var isLoading by rememberSaveable { mutableStateOf(false) }
     var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
@@ -85,47 +83,41 @@ fun EditProfileScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                OutlinedTextField(
+                CustomTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Full Name") },
-                    leadingIcon = { Icon(Icons.Default.Person, contentDescription = "Name") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = "Full Name",
+                    leadingIconRes = R.drawable.baseline_person_24
                 )
 
-                OutlinedTextField(
+                CustomTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Username") },
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Username") },
-                    modifier = Modifier.fillMaxWidth()
+                    label = "username",
+                    leadingIconRes = R.drawable.baseline_alternate_email_24
                 )
 
-                DropdownSelector(
-                    label = "Year",
-                    options = listOf("First", "Second", "Third", "Fourth", "Graduated"),
-                    selectedOption = selectedYear,
-                    onOptionSelected = { selectedYear = it }
+                YearDropDownMenu(
+                    selectedYear = selectedYear,
+                    onYearSelected = { selectedYear = it }
                 )
 
-                DropdownSelector(
-                    label = "Preferred Language",
-                    options = listOf("Java", "C++"),
-                    selectedOption = selectedLanguage,
-                    onOptionSelected = { selectedLanguage = it }
+                LanguageDropDownMenu(
+                    selectedLanguage = selectedLanguage,
+                    onLanguageSelected = { selectedLanguage = it }
                 )
 
                 Button(
                     onClick = {
                         val data = EditDetails(name, username, selectedYear, selectedLanguage)
-                        vm.userDetails(
-                            data,
-                            id,
+                        vm.editDetails(
+                            data = data,
+                            userId = id,
                             onSuccess = {
                                 isLoading = false
-//                                sharedPreferences.saveUserPassword(newPassword)
+                                sharedPreferences.saveUserDetails(data)
                                 navController.navigate(Routes.Home.route) {
-                                    popUpTo(Routes.Home.route) { inclusive = true }
+                                    popUpTo(Routes.Home.route) { inclusive = false }
                                 }
                                 Toast.makeText(context, "Profile Updated!", Toast.LENGTH_SHORT).show()
                             },
@@ -146,45 +138,6 @@ fun EditProfileScreen(
                     Text("Save Changes")
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun DropdownSelector(
-    label: String,
-    options: List<String>,
-    selectedOption: String,
-    onOptionSelected: (String) -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    OutlinedTextField(
-        value = selectedOption.ifEmpty { label },
-        onValueChange = {},
-        readOnly = true, // Prevent manual input
-        label = { Text(label) },
-        trailingIcon = {
-            IconButton(onClick = { expanded = true }) {
-                Icon(Icons.Default.ArrowDropDown, contentDescription = "Dropdown")
-            }
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false },
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        options.forEach { option ->
-            DropdownMenuItem(
-                text = { Text(option) },
-                onClick = {
-                    onOptionSelected(option)
-                    expanded = false
-                }
-            )
         }
     }
 }

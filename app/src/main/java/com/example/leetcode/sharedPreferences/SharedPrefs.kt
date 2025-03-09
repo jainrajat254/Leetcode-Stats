@@ -2,6 +2,7 @@ package com.example.leetcode.sharedPreferences
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.leetcode.data.EditDetails
 import com.example.leetcode.data.LoginResponse
 
 object SharedPreferencesManager {
@@ -48,6 +49,16 @@ object SharedPreferencesManager {
         return if (name != null && id != null && language != null && year != null && username != null && token != null) {
             LoginResponse(name, id, language, year, username, token)
         } else null
+    }
+
+    fun saveUserDetails(details: EditDetails) {
+        sharedPreferences.edit().apply {
+            putString(USER_NAME_KEY, details.name)
+            putString(USER_USERNAME_KEY, details.username)
+            putString(USER_YEAR, details.year)
+            putString(USER_LANGUAGE_KEY, details.selectedLanguage)
+            apply()
+        }
     }
 
     fun saveUserPassword(password: String) {

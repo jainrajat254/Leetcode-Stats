@@ -77,23 +77,7 @@ class UserRepository @Inject constructor(
         }
     }
 
-    suspend fun userDetails(data: EditDetails, userId: String): Result<String> {
-        return withContext(Dispatchers.IO) {
-            try {
-                val response = userService.userDetails(userId, data)
-                if (response.isSuccessful) {
-                    Result.success(response.body() ?: "Details updated successfully")
-                } else {
-                    Result.failure(
-                        Exception(
-                            response.errorBody()?.string() ?: "Update failed"
-                        )
-                    )
-                }
-            } catch (e: Exception) {
-                Result.failure(e)
-            }
-        }
-    }
+    suspend fun editDetails(data: EditDetails, userId: String): LoginResponse =
+        safeApiCall { userService.editDetails(userId, data) }
 
 }
