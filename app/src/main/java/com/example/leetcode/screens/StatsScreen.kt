@@ -18,21 +18,18 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,8 +42,11 @@ import com.example.leetcode.data.Stats
 import com.example.leetcode.models.UserViewModel
 import com.example.leetcode.navigation.BottomNavBar
 import com.example.leetcode.routes.Routes
+import com.example.leetcode.utils.CommonTabRow
 import com.example.leetcode.utils.CommonTopBar
 import com.example.leetcode.utils.EmptyState
+import com.example.leetcode.utils.FilterBottomSheet
+import com.example.leetcode.utils.FilterFAB
 import com.example.leetcode.utils.LoadingScreen
 import kotlinx.coroutines.launch
 
@@ -59,22 +59,37 @@ fun StatsScreen(
 ) {
     LaunchedEffect(Unit) { vm.updateAll() }
 
+    var showFilterDialog by remember { mutableStateOf(false) } // Move state here
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         content = {
-            UserStats(modifier = modifier, vm = vm, navController = navController)
+            UserStats(
+                modifier = modifier,
+                vm = vm,
+                navController = navController,
+                showFilterDialog
+            ) {
+                showFilterDialog = it
+            }
         },
-        bottomBar = { BottomNavBar(navController = navController) }
+        bottomBar = { BottomNavBar(navController = navController) },
+        floatingActionButton = {
+            FilterFAB(onClick = { showFilterDialog = true })
+        },
     )
 }
+
 
 @Composable
 fun UserStats(
     modifier: Modifier = Modifier,
     vm: UserViewModel,
     navController: NavController,
+    showFilterDialog: Boolean,
+    setShowFilterDialog: (Boolean) -> Unit, // Add setter
 ) {
-    val pagerState = rememberPagerState { 2 } // Two pages (Java & C++)
+    val pagerState = rememberPagerState { 2 }
     val languages = listOf("Java", "C++")
     val coroutineScope = rememberCoroutineScope()
 
@@ -84,33 +99,14 @@ fun UserStats(
             .padding(bottom = 72.dp),
         verticalArrangement = Arrangement.Top
     ) {
-        CommonTopBar(title = "Stats") // Using the reusable top bar
+        CommonTopBar(title = "Stats")
 
-        // Pager Tabs
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            languages.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                    text = {
-                        Text(
-                            text = title.uppercase(),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = if (pagerState.currentPage == index)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    }
-                )
-            }
-        }
+        CommonTabRow(
+            tabs = languages,
+            selectedIndex = pagerState.currentPage,
+            onTabSelected = { index -> coroutineScope.launch { pagerState.animateScrollToPage(index) } }
+        )
 
-        // Horizontal Pager
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.weight(1f)
@@ -118,7 +114,9 @@ fun UserStats(
             UserStatsContent(
                 language = languages[page],
                 vm = vm,
-                navController = navController
+                navController = navController,
+                showFilterDialog = showFilterDialog,
+                setShowFilterDialog = setShowFilterDialog // Pass it down
             )
         }
     }
@@ -130,6 +128,8 @@ private fun UserStatsContent(
     language: String,
     vm: UserViewModel,
     navController: NavController,
+    showFilterDialog: Boolean,
+    setShowFilterDialog: (Boolean) -> Unit,
 ) {
     val streakMap by produceState(initialValue = emptyList<Stats>(), language) {
         value = try {
@@ -141,24 +141,55 @@ private fun UserStatsContent(
 
     val isLoading by remember { vm.isLoading }.collectAsState()
 
+    var selectedYear by remember { mutableStateOf("All") }
+    var isActive by remember { mutableStateOf(true) }
+    var minQuestions by remember { mutableStateOf("") }
+
+    val years = listOf("All") + streakMap.map { it.year }.distinct()
+
+    val filteredList = streakMap.filter { stats ->
+        val matchesYear = selectedYear == "All" || stats.year == selectedYear
+        val matchesActivity = if (isActive) stats.submissionCalendar.takeLast(5)
+            .contains(true) else !stats.submissionCalendar.takeLast(5).contains(true)
+        val matchesQuestionCount =
+            minQuestions.toIntOrNull()?.let { stats.totalSolved >= it } ?: true
+        matchesYear && matchesActivity && matchesQuestionCount
+    }
+
     when {
         isLoading -> LoadingScreen()
-        streakMap.isEmpty() -> EmptyState(message = "No stats available")
+        filteredList.isEmpty() -> EmptyState(message = "No stats available")
         else -> {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(streakMap) { stats ->
-                    StatsListItem(
-                        name = stats.name,
-                        username = stats.username,
-                        streakMap = stats.submissionCalendar.take(5).reversed(),
-                        score = stats.totalSolved,
-                        onClick = { navController.navigate(Routes.OtherProfile.createRoute(stats.username)) }
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (showFilterDialog) {
+                    FilterBottomSheet(
+                        years = years,
+                        selectedYear = selectedYear,
+                        onYearSelected = { selectedYear = it },
+                        showActive = true,
+                        isActive = isActive,
+                        onActiveChange = { isActive = it },
+                        minQuestions = minQuestions,
+                        onMinQuestionsChange = { minQuestions = it },
+                        onDismiss = { setShowFilterDialog(false) }
                     )
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredList) { stats ->
+                        StatsListItem(
+                            name = stats.name,
+                            username = stats.username,
+                            streakMap = stats.submissionCalendar.take(5).reversed(),
+                            score = stats.totalSolved,
+                            onClick = { navController.navigate(Routes.OtherProfile.createRoute(stats.username)) }
+                        )
+                    }
                 }
             }
         }

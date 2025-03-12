@@ -37,7 +37,7 @@ fun App() {
 
     NavHost(navController = navController, startDestination = Routes.Splash.route) {
         composable(Routes.Splash.route) {
-            SplashScreen(navController = navController)
+            SplashScreen(navController = navController, vm = vm)
         }
         composable(Routes.Login.route) {
             LoginScreen(navController = navController, vm = vm)

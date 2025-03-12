@@ -3,6 +3,7 @@ package com.example.leetcode.models
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.leetcode.data.Contest
 import com.example.leetcode.data.EditDetails
 import com.example.leetcode.data.EditPassword
 import com.example.leetcode.data.LeaderBoard
@@ -91,11 +92,21 @@ class UserViewModel @Inject constructor(
     suspend fun nameAndLanguage(username: String): List<String> =
         handleApiCall { userRepository.nameAndLanguage(username) }
 
-            suspend fun getUserSocials(username: String): Socials =
-                handleApiCall { userRepository.getUserSocials(username) }
+    suspend fun getUserSocials(username: String): Socials =
+        handleApiCall { userRepository.getUserSocials(username) }
+
+    suspend fun getContestInfo(username: String): Contest =
+        handleApiCall { userRepository.getContestInfo(username) }
 
     suspend fun getUserProfile(username: String): Socials =
         handleApiCall { userRepository.getUserProfile(username) }
+
+    fun isValidUser(username: String, onResult: (Map<String, String>) -> Unit) {
+        viewModelScope.launch {
+            val response = userRepository.isValidUser(username)
+            onResult(response) // Return response directly (message or error)
+        }
+    }
 
     fun updateUser(username: String) {
         viewModelScope.launch {
@@ -149,7 +160,7 @@ class UserViewModel @Inject constructor(
         data: EditPassword,
         userId: String,
         onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         viewModelScope.launch {
             try {
@@ -175,11 +186,11 @@ class UserViewModel @Inject constructor(
         data: EditDetails,
         userId: String,
         onSuccess: (String) -> Unit,
-        onError: (String) -> Unit
+        onError: (String) -> Unit,
     ) {
         viewModelScope.launch {
             try {
-                val response: LoginResponse = userRepository.editDetails(data = data, userId = userId)
+                userRepository.editDetails(data = data, userId = userId)
                 onSuccess("Profile updated successfully")
             } catch (e: Exception) {
                 Log.e("editPassword", "Unexpected error", e)

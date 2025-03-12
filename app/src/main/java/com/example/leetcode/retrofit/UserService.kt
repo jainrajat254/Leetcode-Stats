@@ -1,5 +1,6 @@
 package com.example.leetcode.retrofit
 
+import com.example.leetcode.data.Contest
 import com.example.leetcode.data.EditDetails
 import com.example.leetcode.data.EditPassword
 import com.example.leetcode.data.LeaderBoard
@@ -56,6 +57,12 @@ interface UserService {
 
     @GET("/getUserProfile/{username}")
     suspend fun getUserProfile(@Path("username") username: String): Response<Socials>
+
+    @GET("/getContestInfo/{username}")
+    suspend fun getContestInfo(@Path("username") username: String): Response<Contest>
+
+    @GET("/isValidUser/{username}")
+    suspend fun isValidUser(@Path("username") username: String): Response<Map<String, String>>
 
     @PUT("/editPassword/{id}")
     suspend fun editPassword(@Path("id") id: String, @Body data: EditPassword): Response<String>

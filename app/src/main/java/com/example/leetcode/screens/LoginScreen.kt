@@ -91,7 +91,7 @@ fun LoginScreen(
                 text = "Sign In",
                 enabled = isFormValid,
                 onClick = {
-                    val user = LoginCredentials(username, password)
+                    val user = LoginCredentials(username.trim(), password.trim())
                     vm.loginUser(
                         user,
                         onSuccess = { userResponse ->

@@ -119,7 +119,8 @@ fun EditProfileScreen(
                                 navController.navigate(Routes.Home.route) {
                                     popUpTo(Routes.Home.route) { inclusive = false }
                                 }
-                                Toast.makeText(context, "Profile Updated!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Profile Updated!", Toast.LENGTH_SHORT)
+                                    .show()
                             },
                             onError = { error ->
                                 isLoading = false

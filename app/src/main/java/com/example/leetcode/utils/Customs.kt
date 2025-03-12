@@ -1,11 +1,15 @@
 package com.example.leetcode.utils
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
 import android.net.Uri
 import android.util.Log
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,10 +22,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -35,26 +42,36 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -69,14 +86,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.leetcode.R
+import com.example.leetcode.data.Contest
 import com.example.leetcode.data.Socials
 import com.example.leetcode.models.UserViewModel
+import java.util.Locale
+import kotlin.math.roundToInt
 
 @Composable
 fun AuthNavigationText(
     text: String,
     buttonText: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier.padding(top = 24.dp),
@@ -99,7 +119,7 @@ fun AuthNavigationText(
 fun AuthButton(
     text: String,
     onClick: () -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
 ) {
     Button(
         onClick = onClick,
@@ -124,7 +144,7 @@ fun AuthButton(
 fun PasswordTextField(
     label: String,
     password: String,
-    onPasswordChange: (String) -> Unit
+    onPasswordChange: (String) -> Unit,
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
 
@@ -168,7 +188,7 @@ fun CustomTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    leadingIconRes: Int
+    leadingIconRes: Int,
 ) {
     OutlinedTextField(
         value = value,
@@ -230,23 +250,23 @@ fun LastThirtyDays(
     username: String,
     vm: UserViewModel,
 ) {
-    var lastThirtyDays by remember { mutableStateOf<List<Boolean>>(emptyList()) }
-    var expanded by remember { mutableStateOf(false) }
-
-    LaunchedEffect(username) {
-        try {
-            lastThirtyDays = vm.lastThirtyDays(username)
-            Log.d("THIRTY DAYS", "$lastThirtyDays")
+    val lastThirtyDays by produceState(initialValue = emptyList<Boolean>(), username) {
+        value = try {
+            vm.lastThirtyDays(username).also { Log.d("THIRTY DAYS", "$it") }
         } catch (e: Exception) {
             Log.e("LastThirtyDays", "Error fetching streak data: ${e.localizedMessage}")
+            emptyList()
         }
     }
+
+    var expanded by remember { mutableStateOf(false) }
 
     val daysToShow = if (expanded) lastThirtyDays else lastThirtyDays.takeLast(7)
 
     val cardHeight by animateDpAsState(
-        targetValue = if (expanded) 128.dp else 80.dp, // Increased size for 30 days
-        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing), label = ""
+        targetValue = if (expanded) 128.dp else 80.dp,
+        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+        label = ""
     )
 
     Box(
@@ -281,8 +301,12 @@ fun LastThirtyDays(
                                 horizontalArrangement = Arrangement.SpaceEvenly
                             ) {
                                 rowItems.forEach { isDone ->
-                                    val indicatorColor = if (isDone) Color(0xFF65E26A) else Color(0xFFE45D5D)
-                                    Indicator(modifier = Modifier.size(20.dp), color = indicatorColor)
+                                    val indicatorColor =
+                                        if (isDone) Color(0xFF65E26A) else Color(0xFFE45D5D)
+                                    Indicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = indicatorColor
+                                    )
                                 }
                             }
                         }
@@ -295,13 +319,14 @@ fun LastThirtyDays(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         daysToShow.forEach { isDone ->
-                            val indicatorColor = if (isDone) Color(0xFF65E26A) else Color(0xFFE45D5D)
+                            val indicatorColor =
+                                if (isDone) Color(0xFF65E26A) else Color(0xFFE45D5D)
                             Indicator(modifier = Modifier.size(20.dp), color = indicatorColor)
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp)) // Adjust spacing
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = if (expanded) "Last 30 days" else "Last 7 days",
@@ -394,13 +419,10 @@ fun ProfileHeaderSection(
 }
 
 
-
 @Composable
 fun QuestionStatsSection(username: String, vm: UserViewModel) {
-    var questionsSolved by remember { mutableStateOf<List<String>>(emptyList()) }
-
-    LaunchedEffect(username) {
-        questionsSolved = try {
+    val questionsSolved by produceState(initialValue = emptyList<String>(), username) {
+        value = try {
             vm.questionsSolved(username)
         } catch (e: Exception) {
             emptyList()
@@ -453,13 +475,146 @@ fun QuestionStatsSection(username: String, vm: UserViewModel) {
 @Composable
 fun UserStatsSection(
     username: String = "N/A",
-    primaryLanguage: String = "Java",  // Default language
-    vm: UserViewModel
+    primaryLanguage: String = "Java",
+    vm: UserViewModel,
 ) {
-    var questionsSolved by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isFlipped by remember { mutableStateOf(false) }
+    val rotation by animateFloatAsState(
+        targetValue = if (isFlipped) 180f else 0f,
+        animationSpec = tween(
+            durationMillis = 800,
+            easing = FastOutSlowInEasing
+        ), // Slower & smoother
+        label = "Rotation"
+    )
 
-    LaunchedEffect(username) {
-        questionsSolved = try {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clickable { isFlipped = !isFlipped }
+            .graphicsLayer {
+                cameraDistance = 12 * density
+            }
+    ) {
+        // Front Card
+        if (rotation <= 90f) {
+            FrontCard(
+                username = username,
+                primaryLanguage = primaryLanguage,
+                vm = vm,
+                modifier = Modifier.graphicsLayer {
+                    rotationY = rotation
+                }
+            )
+        }
+        // Back Card (Rotated Correctly)
+        else {
+            BackCard(
+                username = username,
+                vm = vm,
+                modifier = Modifier.graphicsLayer {
+                    rotationY = rotation - 180f // Flip back card correctly
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun BackCard(username: String, vm: UserViewModel, modifier: Modifier = Modifier) {
+    val contestInfo by produceState(
+        initialValue = Contest(0, 0, 0.0, 0.0), username
+    ) {
+        value = try {
+            vm.getContestInfo(username)
+        } catch (e: Exception) {
+            Contest(0, 0, 0.0, 0.0)
+        }
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 75.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        if (contestInfo.attendedContestsCount == 0) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "No contests attended",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                )
+            }
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Contest Info",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                    )
+
+                    StatsRow(
+                        "Total Contests",
+                        contestInfo.attendedContestsCount.toString(),
+                        R.drawable.baseline_numbers_24
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 0.8.dp
+                    )
+
+                    StatsRow(
+                        "Rating",
+                        contestInfo.rating.roundToInt().toString(),
+                        R.drawable.baseline_star_24
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 0.8.dp
+                    )
+
+                    StatsRow(
+                        "Global Ranking",
+                        contestInfo.globalRanking.toString(),
+                        R.drawable.baseline_leaderboard_24
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 0.8.dp
+                    )
+
+                    StatsRow(
+                        "Top Percentage",
+                        "${contestInfo.topPercentage}%",
+                        R.drawable.baseline_percent_24
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FrontCard(username: String, primaryLanguage: String, vm: UserViewModel, modifier: Modifier) {
+    val questionsSolved by produceState(initialValue = emptyList<String>(), username) {
+        value = try {
             vm.questionsSolved(username)
         } catch (e: Exception) {
             emptyList()
@@ -467,9 +622,7 @@ fun UserStatsSection(
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -480,43 +633,37 @@ fun UserStatsSection(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                modifier = Modifier.padding(bottom = 12.dp)
             )
 
+            StatsRow("Primary Language", primaryLanguage, R.drawable.baseline_code_24)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.8.dp)
+
             StatsRow(
-                label = "Primary Language",
-                value = primaryLanguage,
-                iconRes = R.drawable.baseline_code_24
+                "Total Solved",
+                questionsSolved.getOrNull(0) ?: "0",
+                R.drawable.baseline_check_24
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.8.dp)
 
             StatsRow(
-                label = "Total Solved",
-                value = questionsSolved.getOrNull(0) ?: "0",
-                iconRes = R.drawable.baseline_check_24
+                "LeetCode Rank",
+                questionsSolved.getOrNull(4) ?: "0",
+                R.drawable.baseline_leaderboard_24
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.8.dp)
 
             StatsRow(
-                label = "LeetCode Rank",
-                value = questionsSolved.getOrNull(4) ?: "0",
-                iconRes = R.drawable.baseline_leaderboard_24
-            )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.8.dp)
-
-            StatsRow(
-                label = "Acceptance Rate",
-                value = String.format(
+                "Acceptance Rate",
+                String.format(
+                    Locale.US,
                     "%.2f%%",
                     (questionsSolved.getOrNull(5)?.toFloatOrNull() ?: 0f)
                 ),
-                iconRes = R.drawable.baseline_percent_24
+                R.drawable.baseline_percent_24
             )
         }
     }
 }
-
-
 
 @Composable
 fun SocialLinksSection(username: String, vm: UserViewModel) {
@@ -541,22 +688,48 @@ fun SocialLinksSection(username: String, vm: UserViewModel) {
             modifier = Modifier.padding(bottom = 12.dp, start = 8.dp)
         )
 
-        SocialLinkItem(
-            platform = "LeetCode",
-            url = "https://leetcode.com/u/$username",
-            iconRes = R.drawable.leetcode
-        )
-        SocialLinkItem(
-            platform = "GitHub",
-            url = socials.githubUrl ?: "https://github.com",
-            iconRes = R.drawable.github
-        )
-        SocialLinkItem(
-            platform = "LinkedIn",
-            url = socials.linkedinUrl ?: "https://linkedin.com",
-            iconRes = R.drawable.linkedin
-        )
-
+        // **Wrap LazyVerticalGrid in a Box with fixed height**
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp) // Adjust height as needed
+        ) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2), // 2 Columns for 2x2 layout
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize() // Fill the Box
+            ) {
+                item {
+                    SocialLinkItem(
+                        platform = "LeetCode",
+                        url = "https://leetcode.com/u/$username",
+                        iconRes = R.drawable.leetcode
+                    )
+                }
+                item {
+                    SocialLinkItem(
+                        platform = "GitHub",
+                        url = socials.githubUrl ?: "https://github.com",
+                        iconRes = R.drawable.github
+                    )
+                }
+                item {
+                    SocialLinkItem(
+                        platform = "LinkedIn",
+                        url = socials.linkedinUrl ?: "https://linkedin.com",
+                        iconRes = R.drawable.linkedin
+                    )
+                }
+                item {
+                    SocialLinkItem(
+                        platform = "X",
+                        url = socials.twitterUrl ?: "https://x.com",
+                        iconRes = R.drawable.x
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -695,10 +868,9 @@ fun GenericDropDownMenu(
     items: List<String>,
     leadingIconRes: Int? = null,
     trailingIconRes: ImageVector = Icons.Default.ArrowDropDown, // Default to ArrowDropDown icon
-    modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    Box(modifier = modifier) {
+    Box(modifier = Modifier) {
         OutlinedTextField(
             value = selectedItem,
             onValueChange = {},
@@ -753,7 +925,6 @@ fun GenericDropDownMenu(
 fun LanguageDropDownMenu(
     selectedLanguage: String,
     onLanguageSelected: (String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     GenericDropDownMenu(
         selectedItem = selectedLanguage,
@@ -761,7 +932,6 @@ fun LanguageDropDownMenu(
         label = "Programming Language",
         items = listOf("Java", "C++"),
         leadingIconRes = R.drawable.baseline_code_24, // Custom icon for languages
-        modifier = modifier
     )
 }
 
@@ -769,7 +939,6 @@ fun LanguageDropDownMenu(
 fun YearDropDownMenu(
     selectedYear: String,
     onYearSelected: (String) -> Unit,
-    modifier: Modifier = Modifier,
 ) {
     GenericDropDownMenu(
         selectedItem = selectedYear,
@@ -783,6 +952,176 @@ fun YearDropDownMenu(
             "Graduated"
         ),
         leadingIconRes = R.drawable.baseline_edit_calendar_24,
-        modifier = modifier
     )
+}
+
+@Composable
+fun CommonTabRow(
+    tabs: List<String>,
+    selectedIndex: Int,
+    onTabSelected: (Int) -> Unit,
+) {
+    TabRow(
+        selectedTabIndex = selectedIndex,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.primary,
+        indicator = { tabPositions ->
+            TabRowDefaults.SecondaryIndicator(
+                Modifier
+                    .tabIndicatorOffset(tabPositions[selectedIndex])
+                    .height(3.dp),
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    ) {
+        tabs.forEachIndexed { index, title ->
+            Tab(
+                selected = selectedIndex == index,
+                onClick = { onTabSelected(index) },
+                text = {
+                    Text(
+                        text = title.uppercase(),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Medium,
+                            color = if (selectedIndex == index)
+                                MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+            )
+        }
+    }
+}
+
+
+@Composable
+fun FilterFAB(onClick: () -> Unit) {
+    FloatingActionButton(onClick = { onClick() }) {
+        Image(
+            painter = painterResource(id = R.drawable.baseline_filter_list_alt_24),
+            contentDescription = "Filter",
+            modifier = Modifier.padding(8.dp)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterBottomSheet(
+    years: List<String>,
+    selectedYear: String,
+    onYearSelected: (String) -> Unit,
+    showActive: Boolean = false,
+    isActive: Boolean = false,
+    onActiveChange: (Boolean) -> Unit = { },
+    minQuestions: String,
+    onMinQuestionsChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = { onDismiss() },
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(text = "Filters", style = MaterialTheme.typography.titleMedium)
+
+            DropdownMenuComponent(
+                label = "Year",
+                options = years,
+                selectedOption = selectedYear,
+                onOptionSelected = onYearSelected
+            )
+            if (showActive) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "Status: ${if (isActive) "Active" else "Inactive"}")
+                    Switch(checked = isActive, onCheckedChange = onActiveChange)
+                }
+            }
+
+            OutlinedTextField(
+                value = minQuestions,
+                onValueChange = { if (it.all { char -> char.isDigit() }) onMinQuestionsChange(it) },
+                label = { Text("Min Questions Solved") },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = { onDismiss() },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Apply Filters")
+            }
+        }
+    }
+}
+
+@Composable
+fun DropdownMenuComponent(
+    label: String,
+    options: List<String>,
+    selectedOption: String,
+    onOptionSelected: (String) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "$label:",
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true }
+                    .padding(8.dp)
+            ) {
+                Text(text = selectedOption)
+            }
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier
+                .fillMaxWidth() // Ensures the dropdown width matches the parent
+        ) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(text = option) },
+                    onClick = {
+                        onOptionSelected(option)
+                        expanded = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@SuppressLint("MissingPermission")
+fun Context.isInternetAvailable(): Boolean {
+    val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    return connectivityManager.activeNetwork != null &&
+            connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork) != null
 }

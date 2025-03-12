@@ -46,6 +46,7 @@ import com.example.leetcode.data.StreakContent
 import com.example.leetcode.models.UserViewModel
 import com.example.leetcode.navigation.BottomNavBar
 import com.example.leetcode.routes.Routes
+import com.example.leetcode.utils.CommonTabRow
 import com.example.leetcode.utils.CommonTopBar
 import com.example.leetcode.utils.EmptyState
 import com.example.leetcode.utils.LoadingScreen
@@ -74,16 +75,11 @@ fun StreakScreen(vm: UserViewModel, navController: NavController) {
     Column(modifier = Modifier.fillMaxSize()) {
         CommonTopBar(title = "Streak") // Using the reusable top bar
 
-        TabRow(selectedTabIndex = pagerState.currentPage) {
-            languages.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                    text = { Text(title.uppercase()) }
-                )
-            }
-        }
-
+        CommonTabRow(
+            tabs = languages,
+            selectedIndex = pagerState.currentPage,
+            onTabSelected = { index -> coroutineScope.launch { pagerState.animateScrollToPage(index) } }
+        )
         HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
             StudentStreak(language = languages[page], vm = vm, navController = navController)
         }
@@ -117,7 +113,7 @@ fun StreakList(streaks: List<StreakContent>, navController: NavController) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp, bottom = 0.dp, top = 20.dp),
+            .padding(16.dp, bottom = 80.dp, top = 20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(streaks) { streak ->

@@ -7,7 +7,7 @@
     <!-- Background Circle -->
     <path
         android:fillColor="#1E1E1E"
-        android:pathData="M0,0h108v108h-108z" />
+        android:pathData="M54,2a52,52 0 1,1 0,104a52,52 0 1,1 0,-104z" />
 
     <!-- Left Curly Bracket { -->
     <path
@@ -32,7 +32,6 @@
         android:pathData="M34,70L48,50"
         android:strokeColor="#FF65E26A"
         android:strokeWidth="4"
-        android:fillColor="#1E1E1E"
         android:strokeLineCap="round" />
 
     <!-- Red Downward Line (Down) -->
@@ -40,7 +39,6 @@
         android:pathData="M48,50L60,60"
         android:strokeColor="#FFE45D5D"
         android:strokeWidth="4"
-        android:fillColor="#1E1E1E"
         android:strokeLineCap="round" />
 
     <!-- Green Upward Line (Second Up) -->
@@ -48,8 +46,6 @@
         android:pathData="M60,60L77,40"
         android:strokeColor="#FF65E26A"
         android:strokeWidth="4"
-        android:fillColor="#1E1E1E"
         android:strokeLineCap="round" />
-
 
 </vector>

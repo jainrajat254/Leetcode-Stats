@@ -23,13 +23,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -55,7 +50,10 @@ import com.example.leetcode.data.LeaderBoard
 import com.example.leetcode.models.UserViewModel
 import com.example.leetcode.navigation.BottomNavBar
 import com.example.leetcode.routes.Routes
+import com.example.leetcode.utils.CommonTabRow
 import com.example.leetcode.utils.CommonTopBar
+import com.example.leetcode.utils.FilterBottomSheet
+import com.example.leetcode.utils.FilterFAB
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -66,21 +64,31 @@ fun LeaderboardScreen(
 ) {
     LaunchedEffect(true) { vm.updateAll() }
 
+    var showFilterDialog by remember { mutableStateOf(false) } // Move state here
+
     Scaffold(containerColor = MaterialTheme.colorScheme.background,
         content = {
             LeaderboardContent(
-                vm = vm, navController = navController
-            )
+                vm = vm, navController = navController,
+                showFilterDialog
+            ) {
+                showFilterDialog = it
+            }
         }, bottomBar = {
             BottomNavBar(navController = navController)
-        })
+        },
+        floatingActionButton = {
+            FilterFAB(onClick = { showFilterDialog = true })
+        },
+        )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeaderboardContent(
     vm: UserViewModel,
     navController: NavController,
+    showFilterDialog: Boolean,
+    setShowFilterDialog: (Boolean) -> Unit,
 ) {
     val tabs = listOf("Club", "Language")
     val pagerState = rememberPagerState { tabs.size }
@@ -96,45 +104,24 @@ fun LeaderboardContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary,
-            indicator = { tabPositions ->
-                TabRowDefaults.SecondaryIndicator(
-                    Modifier
-                        .tabIndicatorOffset(tabPositions[pagerState.currentPage])
-                        .height(3.dp),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = pagerState.currentPage == index,
-                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(index) } },
-                    text = {
-                        Text(
-                            text = title.uppercase(),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontWeight = FontWeight.Medium,
-                                color = if (pagerState.currentPage == index)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurface
-                            )
-                        )
-                    }
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
+        CommonTabRow(
+            tabs = tabs,
+            selectedIndex = pagerState.currentPage,
+            onTabSelected = { index -> coroutineScope.launch { pagerState.animateScrollToPage(index) } }
+        )
 
         HorizontalPager(
             state = pagerState, modifier = Modifier.weight(1f)
         ) { page ->
             when (page) {
-                0 -> ClubLeaderboard(vm, navController)
-                1 -> LanguageLeaderboard(vm, navController)
+                0 -> ClubLeaderboard(vm = vm,
+                    navController = navController,
+                    showFilterDialog = showFilterDialog,
+                    setShowFilterDialog = setShowFilterDialog)
+                1 -> LanguageLeaderboard(vm = vm,
+                    navController = navController,
+                    showFilterDialog = showFilterDialog,
+                    setShowFilterDialog = setShowFilterDialog)
             }
         }
     }
@@ -154,12 +141,11 @@ private fun LeaderboardList(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp, bottom = 80.dp),
+                .padding(bottom = 84.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
                 TopThreeSection(users = leaderboard.take(3), navController = navController)
-                Spacer(Modifier.height(16.dp))
             }
             itemsIndexed(leaderboard.drop(3)) { index, entry ->
                 LeaderboardItem(rank = index + 4, entry = entry) {
@@ -175,6 +161,8 @@ private fun LeaderboardList(
 private fun ClubLeaderboard(
     vm: UserViewModel,
     navController: NavController,
+    showFilterDialog: Boolean,
+    setShowFilterDialog: (Boolean) -> Unit,
 ) {
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -192,10 +180,33 @@ private fun ClubLeaderboard(
         }
     }
 
+    var selectedYear by remember { mutableStateOf("All") }
+    var minQuestions by remember { mutableStateOf("") }
+
+    val years = listOf("All") + leaderboardEntries.map { it.year }.distinct()
+
+    val filteredList = leaderboardEntries.filter { stats ->
+        val matchesYear = selectedYear == "All" || stats.year == selectedYear
+        val matchesQuestionCount =
+            minQuestions.toIntOrNull()?.let { stats.totalSolved >= it } ?: true
+        matchesYear && matchesQuestionCount
+    }
+
+    if (showFilterDialog) {
+        FilterBottomSheet(
+            years = years,
+            selectedYear = selectedYear,
+            onYearSelected = { selectedYear = it },
+            minQuestions = minQuestions,
+            onMinQuestionsChange = { minQuestions = it },
+            onDismiss = { setShowFilterDialog(false) }
+        )
+    }
+
     LeaderboardContent(
         loading = loading,
         error = error,
-        leaderboardEntries = leaderboardEntries,
+        leaderboardEntries = filteredList,
         navController = navController
     )
 }
@@ -204,6 +215,8 @@ private fun ClubLeaderboard(
 private fun LanguageLeaderboard(
     vm: UserViewModel,
     navController: NavController,
+    showFilterDialog: Boolean,
+    setShowFilterDialog: (Boolean) -> Unit,
 ) {
     val languages = listOf("Java", "C++")
     val pagerState = rememberPagerState { languages.size }
@@ -230,37 +243,45 @@ private fun LanguageLeaderboard(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
     ) {
-        TabRow(
-            selectedTabIndex = pagerState.currentPage,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary
-        ) {
-            languages.forEachIndexed { index, title ->
-                Tab(selected = pagerState.currentPage == index, onClick = {
-                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                }, text = {
-                    Text(
-                        text = title.uppercase(),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            color = if (pagerState.currentPage == index) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface
-                        )
-                    )
-                })
-            }
-        }
+        CommonTabRow(
+            tabs = languages,
+            selectedIndex = pagerState.currentPage,
+            onTabSelected = { index -> coroutineScope.launch { pagerState.animateScrollToPage(index) } }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        var selectedYear by remember { mutableStateOf("All") }
+        var minQuestions by remember { mutableStateOf("") }
+
+        val years = listOf("All") + leaderboardEntries.map { it.year }.distinct()
+
+        val filteredList = leaderboardEntries.filter { stats ->
+            val matchesYear = selectedYear == "All" || stats.year == selectedYear
+            val matchesQuestionCount =
+                minQuestions.toIntOrNull()?.let { stats.totalSolved >= it } ?: true
+            matchesYear && matchesQuestionCount
+        }
+
+        if (showFilterDialog) {
+            FilterBottomSheet(
+                years = years,
+                selectedYear = selectedYear,
+                onYearSelected = { selectedYear = it },
+                minQuestions = minQuestions,
+                onMinQuestionsChange = { minQuestions = it },
+                onDismiss = { setShowFilterDialog(false) }
+            )
+        }
+
         HorizontalPager(
             state = pagerState, modifier = Modifier.weight(1f)
-        ) { page ->
+        ) {
             LeaderboardContent(
                 loading = loading,
                 error = error,
-                leaderboardEntries = leaderboardEntries,
+                leaderboardEntries = filteredList,
                 navController = navController
             )
         }
@@ -288,30 +309,7 @@ private fun LeaderboardContent(
             Text("Error: $error", color = Color.Red)
         }
 
-        else -> LeaderboardList(leaderboardEntries, navController)
-    }
-}
-
-@Composable
-fun LoadableContent(
-    loading: Boolean,
-    error: String?,
-    content: @Composable () -> Unit,
-) {
-    when {
-        loading -> Box(
-            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
-
-        error != null -> Box(
-            modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
-        ) {
-            Text(text = error, color = MaterialTheme.colorScheme.error)
-        }
-
-        else -> content()
+        else -> LeaderboardList(leaderboardEntries, navController = navController)
     }
 }
 

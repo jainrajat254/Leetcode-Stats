@@ -4,6 +4,7 @@ import com.example.leetcode.data.*
 import com.example.leetcode.retrofit.UserService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -58,6 +59,9 @@ class UserRepository @Inject constructor(
     suspend fun getUserProfile(username: String): Socials =
         safeApiCall { userService.getUserProfile(username) }
 
+    suspend fun getContestInfo(username: String): Contest =
+        safeApiCall { userService.getContestInfo(username) }
+
     suspend fun editPassword(data: EditPassword, userId: String): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
@@ -79,5 +83,20 @@ class UserRepository @Inject constructor(
 
     suspend fun editDetails(data: EditDetails, userId: String): LoginResponse =
         safeApiCall { userService.editDetails(userId, data) }
+
+    suspend fun isValidUser(username: String): Map<String, String> {
+        return try {
+            val response: Response<Map<String, String>> = userService.isValidUser(username) // API call
+            if (response.isSuccessful && response.body() != null) {
+                response.body()!! // Return API response (message or error)
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "Something went wrong"
+                val errorMessage = JSONObject(errorBody).optString("error", "Unknown error")
+                mapOf("error" to errorMessage) // Return error as a map
+            }
+        } catch (e: Exception) {
+            mapOf("error" to (e.message ?: "Unknown error occurred")) // Catch exceptions
+        }
+    }
 
 }

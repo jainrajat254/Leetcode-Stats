@@ -32,14 +32,19 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.leetcode.R
 import com.example.leetcode.models.UserViewModel
@@ -52,6 +57,7 @@ import com.example.leetcode.utils.ProfileHeaderSection
 import com.example.leetcode.utils.QuestionStatsSection
 import com.example.leetcode.utils.SocialLinksSection
 import com.example.leetcode.utils.UserStatsSection
+import com.example.leetcode.utils.isInternetAvailable
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,80 +66,121 @@ fun UserProfileScreen(
     vm: UserViewModel,
     navController: NavController,
 ) {
-    LaunchedEffect(Unit) { vm.updateAll() }
+    val isLoggedIn by rememberUpdatedState(SharedPreferencesManager.isLoggedIn())
+    val context = LocalContext.current
+    var isOnline by remember { mutableStateOf(context.isInternetAvailable()) }
 
-    val userResponse = getUser()
-    val displayName = userResponse?.name ?: "User Name"
-    val username = userResponse?.username ?: "username"
-    val selectedLanguage by rememberUpdatedState(userResponse?.selectedLanguage ?: "Java")
-
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-
-    ModalNavigationDrawer(
-        drawerContent = {
-            EnhancedDrawerContent(
-                navController = navController,
-                displayName = displayName,
-                closeDrawer = { scope.launch { drawerState.close() } }
-            )
-        },
-        drawerState = drawerState
-    ) {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "Profile",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+    if (isLoggedIn) {
+        LaunchedEffect(Unit) {
+            vm.updateAll()
+            isOnline = context.isInternetAvailable()
+        }
+        if (!isOnline) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "No Internet Connection",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
                         )
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    ),
-                    navigationIcon = {
-                        IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Menu")
-                        }
-                    }
-                )
-            },
-                    bottomBar = { BottomNavBar(navController = navController) },
-            content = { paddingValues ->
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(top = 20.dp)
-                        .background(MaterialTheme.colorScheme.background),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    item { ProfileHeaderSection(displayName = displayName, vm = vm, username = username) }
-                    item { QuestionStatsSection(username, vm) }
-                    item { LastThirtyDays(username = username, vm = vm, modifier = Modifier) }
-                    item {
-                        UserStatsSection(
-                            primaryLanguage = selectedLanguage,
-                            username = username,
-                            vm = vm
+                    )
+                    Text(
+                        text = "Try again later",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.W500,
+                            fontSize = 18.sp,
+                            color = MaterialTheme.colorScheme.error
                         )
-                    }
-                    item { SocialLinksSection(username, vm) }
+                    )
                 }
             }
-        )
+        } else {
+        val userResponse = getUser()
+        val displayName = userResponse?.name ?: "User Name"
+        val username = userResponse?.username ?: "username"
+        val selectedLanguage by rememberUpdatedState(userResponse?.selectedLanguage ?: "Java")
+
+        val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+        val scope = rememberCoroutineScope()
+
+        ModalNavigationDrawer(
+            drawerContent = {
+                EnhancedDrawerContent(
+                    navController = navController,
+                    displayName = displayName,
+                    closeDrawer = { scope.launch { drawerState.close() } }
+                )
+            },
+            drawerState = drawerState
+        ) {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Profile",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            )
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        ),
+                        navigationIcon = {
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
+                            }
+                        }
+                    )
+                },
+                bottomBar = { BottomNavBar(navController = navController) },
+                content = { paddingValues ->
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .padding(top = 20.dp)
+                            .background(MaterialTheme.colorScheme.background),
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        item {
+                            ProfileHeaderSection(
+                                displayName = displayName,
+                                vm = vm,
+                                username = username
+                            )
+                        }
+                        item { QuestionStatsSection(username, vm) }
+                        item { LastThirtyDays(username = username, vm = vm, modifier = Modifier) }
+                        item {
+                            UserStatsSection(
+                                primaryLanguage = selectedLanguage,
+                                username = username,
+                                vm = vm
+                            )
+                        }
+                        item { SocialLinksSection(username, vm) }
+                    }
+                }
+            )
+        }
     }
+        }
 }
 
 @Composable
 private fun EnhancedDrawerContent(
     navController: NavController,
     displayName: String,
-    closeDrawer: () -> Unit
+    closeDrawer: () -> Unit,
 ) {
     Box(
         modifier = Modifier
@@ -186,7 +233,7 @@ private fun EnhancedDrawerContent(
                 onClick = {
                     SharedPreferencesManager.clearUserData()
                     navController.navigate(Routes.Login.route) {
-                        popUpTo(Routes.Login.route) { inclusive = true }
+                        popUpTo(0) { inclusive = true }
                     }
                 }
             )

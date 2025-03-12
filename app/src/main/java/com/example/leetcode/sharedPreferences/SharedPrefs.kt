@@ -51,6 +51,11 @@ object SharedPreferencesManager {
         } else null
     }
 
+    fun getUsername(): String? {
+        val username = sharedPreferences.getString(USER_USERNAME_KEY, null)
+        return username
+    }
+
     fun saveUserDetails(details: EditDetails) {
         sharedPreferences.edit().apply {
             putString(USER_NAME_KEY, details.name)
